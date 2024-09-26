@@ -27,10 +27,10 @@ void handle_interrupt(unsigned cause) {
 /* Add your code here for initializing interrupts. */
 void labinit(void) {
 	// 3*10⁶ == 0000 0000 0010 1101 : 1100 0110 1100 0000 - 1
-	volatile unsigned short* timer = (volatile unsigned short*) 0x04000020;
-	*(timer + 2) = 29999999/10;//(29999999/1) & 0xffff;
-	//*(timer + 3) = 1;//(29999999/1) >> 16;
-	*(timer + 1) = 4;
+	volatile unsigned int* timer = (volatile unsigned int*) 0x04000020;
+	*(timer + 2) = (29999999/10) & 0xffff;
+	*(timer + 3) = (29999999/10) >> 16;
+	*(timer + 1) = 6;
 }
 
 void set_leds(int led_mask) {
@@ -106,12 +106,12 @@ int main() {
   int seconds = 0;
   int not_done = 1;
   set_leds(seconds++);
-  volatile unsigned short* timer = (volatile unsigned short*) 0x04000020;
+  volatile unsigned int* timer = (volatile unsigned int*) 0x04000020;
 
   while (1) {
     //delay( 2 );
 	if (*timer & 1) {
-		*timer = 0;
+		*timer = 2;
 		time2string( textstring, mytime );
     	display_string( textstring );
 		tick( &mytime );
