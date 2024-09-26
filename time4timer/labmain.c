@@ -19,6 +19,8 @@ extern int nextprime( int );
 int mytime = 0x5957;
 char textstring[] = "text, more text, and even more text!";
 
+int timeoutcount;
+
 /* Below is the function that will be called when an interrupt is triggered. */
 void handle_interrupt(unsigned cause) {
 
@@ -27,7 +29,7 @@ void handle_interrupt(unsigned cause) {
 /* Add your code here for initializing interrupts. */
 void labinit(void) {
 	// 3*10⁶ == 0000 0000 0010 1101 : 1100 0110 1100 0000 - 1
-	volatile unsigned int* timer = (volatile unsigned int*) 0x04000020;
+	volatile int* timer = (volatile int*) 0x04000020;
 	*(timer + 2) = (29999999/10) & 0xffff;
 	*(timer + 3) = (29999999/10) >> 16;
 	*(timer + 1) = 6;
@@ -81,22 +83,22 @@ void set_displays(int display_number, int value) {
 }
 
 int get_sw( void )  {
-	volatile char* switches = (volatile char*) 0x04000010;
+	volatile int* switches = (volatile int*) 0x04000010;
 	return *switches & 0x3ff;
 }
 
 int get_btn( void )  {
-	volatile char* button = (volatile char*) 0x040000d0;
+	volatile int* button = (volatile int*) 0x040000d0;
 	return *button & 1;
 }
 
 void update_display(int hours, int minutes, int seconds) {
 	set_displays(5, hours/10);
-	set_displays(4,hours%10);
+	set_displays(4, hours%10);
 	set_displays(3, minutes/10);
-	set_displays(2,minutes%10);
-	set_displays(1,seconds/10);
-	set_displays(0,seconds%10);
+	set_displays(2, minutes%10);
+	set_displays(1, seconds/10);
+	set_displays(0, seconds%10);
 }
 
 int main() {
@@ -106,35 +108,39 @@ int main() {
   int seconds = 0;
   int not_done = 1;
   set_leds(seconds++);
-  volatile unsigned int* timer = (volatile unsigned int*) 0x04000020;
-
+  volatile int* timer = (volatile int*) 0x04000020;
+  timeoutcount = 0;
   while (1) {
     //delay( 2 );
 	if (*timer & 1) {
-		*timer = 2;
-		time2string( textstring, mytime );
-    	display_string( textstring );
-		tick( &mytime );
+		*timer = 0;
+		timeoutcount++;
+		if (timeoutcount == 10) {
+			timeoutcount = 0;
+			time2string( textstring, mytime );
+			display_string( textstring );
+			tick( &mytime );
 
-		if (seconds++ < 16 && not_done) {
-			set_leds(seconds);
-			if (seconds == 15)
-				not_done = 0;
-			}
+			if (seconds++ < 16 && not_done) {
+				set_leds(seconds);
+				if (seconds == 15)
+					not_done = 0;
+				}
 
-		if (seconds == 60){
-				seconds = 0;
-				minutes++;
-				if (minutes == 60) {
-					minutes = 0;
-					hours++;
-					if (hours == 100) {
-						hours = 0;
+			if (seconds >= 60){
+					seconds = 0;
+					minutes++;
+					if (minutes >= 60) {
+						minutes = 0;
+						hours++;
+						if (hours >= 100) {
+							hours = 0;
+						}
 					}
 				}
-			}
 
-		update_display(hours, minutes, seconds);
+			update_display(hours, minutes, seconds);
+		}
 	}
 	if (get_btn()) {
 		int state = get_sw();
