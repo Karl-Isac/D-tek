@@ -15,7 +15,6 @@ extern void tick(int*);
 extern void delay(int);
 extern int nextprime( int );
 
-int prime = 1234567;
 
 int mytime = 0x5957;
 char textstring[] = "text, more text, and even more text!";
@@ -23,9 +22,7 @@ char textstring[] = "text, more text, and even more text!";
 int timeoutcount;
 
 /* Below is the function that will be called when an interrupt is triggered. */
-void handle_interrupt ( unsigned cause ) {
- display_time (mytime);
- tick (&mytime);
+void handle_interrupt(unsigned cause) {
 
 }
 
@@ -113,20 +110,13 @@ int main() {
   set_leds(seconds++);
   volatile int* timer = (volatile int*) 0x04000020;
   timeoutcount = 0;
- while (1) {
- print (”Prime: ”);
- prime = nextprime( prime );
- print_dec( prime );
- print(”\n”);
- }
-
   while (1) {
     //delay( 2 );
 	if (*timer & 1) {
 		*timer = 0;
 		timeoutcount++;
 		if (timeoutcount == 10) {
-			timeoutcount = 0;
+			timeoutcount = 0; // = 2; Funkar också men försöker inte ändra run-biten
 			time2string( textstring, mytime );
 			display_string( textstring );
 			tick( &mytime );
