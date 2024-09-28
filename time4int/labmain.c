@@ -9,12 +9,21 @@
 
 extern void print(const char*);
 extern void print_dec(unsigned int);
-extern void display_string(char*);
-extern void time2string(char*,int);
 extern void tick(int*);
-extern void delay(int);
 extern int nextprime( int );
+extern void enable_interrupt( void );
+// Dessa finns sen men är här för att deklareras i förväg
+void set_leds(int led_mask);
+void set_displays(int display_number, int value);
+void update_display(int hours, int minutes, int seconds);
+int get_sw( void );
 
+
+int prime = 1234567;
+int hours = 0;
+int minutes = 0;
+int seconds = 0;
+int not_done = 1;
 
 int mytime = 0x5957;
 char textstring[] = "text, more text, and even more text!";
@@ -22,17 +31,61 @@ char textstring[] = "text, more text, and even more text!";
 int timeoutcount;
 
 /* Below is the function that will be called when an interrupt is triggered. */
-void handle_interrupt(unsigned cause) {
+void handle_interrupt ( unsigned cause ) {
+	volatile unsigned short* timer = (volatile unsigned short*) 0x04000020;
+	*timer = 0;	// Återställer hela status registret, påverkar inte RUN-biten
+	if (++timeoutcount == 10) {
+		timeoutcount = 0;
+		counter_stuff();
+		tick( &mytime );
+		update_display(hours, minutes, seconds);
+	}
+}
 
+void counter_stuff( void ) {
+	if (not_done && seconds++ < 16) {
+		set_leds(seconds);
+		if (seconds == 15)
+			not_done = 0;
+		}
+
+	if (seconds >= 60){
+			seconds = 0;
+			minutes++;
+			if (minutes >= 60) {
+				minutes = 0;
+				hours++;
+				if (hours >= 100) {
+					hours = 0;
+				}
+			}
+		}
+}
+
+void button_stuff( void ) {
+	int state = get_sw();
+	int dis = state >> 8;
+	switch(dis) {
+		case 1:
+			seconds = state & 63;
+			break;
+		case 2:
+			minutes = state & 63;
+			break;
+		case 3:
+			hours = state & 63;
+			break;
+	}
 }
 
 /* Add your code here for initializing interrupts. */
 void labinit(void) {
-	// 3*10⁶ == 0000 0000 0010 1101 : 1100 0110 1100 0000 - 1
-	volatile int* timer = (volatile int*) 0x04000020;
-	*(timer + 2) = (29999999/10) & 0xffff;
-	*(timer + 3) = (29999999/10) >> 16;
-	*(timer + 1) = 6;
+	// 3*10⁶ sek == 0000 0000 0010 1101 : 1100 0110 1100 0000 - 1 sek
+	volatile unsigned short* timer = (volatile unsigned short*) 0x04000020;
+	*(timer + 2*2) = (29999999/10) & 0xffff;	// Fixa med unsigned short istället
+	*(timer + 3*2) = (29999999/10) >> 16;
+	*(timer + 1*2) = 7;
+	enable_interrupt();
 }
 
 void set_leds(int led_mask) {
@@ -77,9 +130,7 @@ void set_displays(int display_number, int value) {
 			in = 0b10011000;
 			break; 
 	}
-
 	*display = in;
-
 }
 
 int get_sw( void )  {
@@ -101,64 +152,12 @@ void update_display(int hours, int minutes, int seconds) {
 	set_displays(0, seconds%10);
 }
 
-int main() {
-  labinit();
-  int hours = 0;
-  int minutes = 0;
-  int seconds = 0;
-  int not_done = 1;
-  set_leds(seconds++);
-  volatile int* timer = (volatile int*) 0x04000020;
-  timeoutcount = 0;
-  while (1) {
-    //delay( 2 );
-	if (*timer & 1) {
-		*timer = 0;
-		timeoutcount++;
-		if (timeoutcount == 10) {
-			timeoutcount = 0; // = 2; Funkar också men försöker inte ändra run-biten
-			time2string( textstring, mytime );
-			display_string( textstring );
-			tick( &mytime );
-
-			if (seconds++ < 16 && not_done) {
-				set_leds(seconds);
-				if (seconds == 15)
-					not_done = 0;
-				}
-
-			if (seconds >= 60){
-					seconds = 0;
-					minutes++;
-					if (minutes >= 60) {
-						minutes = 0;
-						hours++;
-						if (hours >= 100) {
-							hours = 0;
-						}
-					}
-				}
-
-			update_display(hours, minutes, seconds);
-		}
+int main ( void ) {
+	labinit();
+	while (1) {
+		print ("Prime: ");
+		prime = nextprime( prime );
+		print_dec( prime );
+		print("\n");
 	}
-	if (get_btn()) {
-		int state = get_sw();
-		int dis = state >> 8;
-		switch(dis) {
-			case 1:
-				seconds = state & 63;
-				break;
-			case 2:
-				minutes = state & 63;
-				break;
-			case 3:
-				hours = state & 63;
-				break;
-		}
-		update_display(hours, minutes, seconds);
-    }
-  }
 }
-
-
