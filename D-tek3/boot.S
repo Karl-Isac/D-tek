@@ -4,7 +4,7 @@ welcome_msg: .asciz "================================================\n===== RIS
 	
 .section .text
 .align 2
-.globl _start, enable_interrupt
+.globl _start
 	
 _isr_handler:
 	j _isr_routine	   /* ISR service routine here */
@@ -124,9 +124,3 @@ _start:
 	jal main
 	
 loop:	j loop
-
-enable_interrupt:
-	csrsi mie, 16
-	// csrsi mie, 18
-	csrsi mstatus, 3
-	jr	ra

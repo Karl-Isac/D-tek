@@ -6,7 +6,6 @@
 
 
 /* Below functions are external and found in other files. */
-
 extern void print(const char*);
 extern void print_dec(unsigned int);
 extern void display_string(char*);
@@ -15,11 +14,8 @@ extern void tick(int*);
 extern void delay(int);
 extern int nextprime( int );
 
-
 int mytime = 0x5957;
 char textstring[] = "text, more text, and even more text!";
-
-int timeoutcount;
 
 /* Below is the function that will be called when an interrupt is triggered. */
 void handle_interrupt(unsigned cause) {
@@ -28,15 +24,10 @@ void handle_interrupt(unsigned cause) {
 
 /* Add your code here for initializing interrupts. */
 void labinit(void) {
-	// 3*10⁶ == 0000 0000 0010 1101 : 1100 0110 1100 0000 - 1
-	volatile int* timer = (volatile int*) 0x04000020;
-	*(timer + 2) = (29999999/10) & 0xffff;
-	*(timer + 3) = (29999999/10) >> 16;
-	*(timer + 1) = 6;
+  
 }
-
 void set_leds(int led_mask) {
-	volatile char* LED = (volatile char*) 0x04000000;
+	volatile int* LED = (volatile int*) 0x04000000;
 	*LED = led_mask;
 }
 
@@ -88,17 +79,17 @@ int get_sw( void )  {
 }
 
 int get_btn( void )  {
-	volatile int* button = (volatile int*) 0x040000d0;
+	volatile char* button = (volatile char*) 0x040000d0;
 	return *button & 1;
 }
 
 void update_display(int hours, int minutes, int seconds) {
 	set_displays(5, hours/10);
-	set_displays(4, hours%10);
+	set_displays(4,hours%10);
 	set_displays(3, minutes/10);
-	set_displays(2, minutes%10);
-	set_displays(1, seconds/10);
-	set_displays(0, seconds%10);
+	set_displays(2,minutes%10);
+	set_displays(1,seconds/10);
+	set_displays(0,seconds%10);
 }
 
 int main() {
@@ -108,44 +99,33 @@ int main() {
   int seconds = 0;
   int not_done = 1;
   set_leds(seconds++);
-  volatile int* timer = (volatile int*) 0x04000020;
-  timeoutcount = 0;
+
   while (1) {
-    //delay( 2 );
-	if (*timer & 1) {
-		*timer = 0;
-		timeoutcount++;
-		if (timeoutcount == 10) {
-			timeoutcount = 0; // = 2; Funkar också men försöker inte ändra run-biten
-			time2string( textstring, mytime );
-			display_string( textstring );
+    time2string( textstring, mytime );
+    display_string( textstring );
+    delay( 2 );
 
-			int minutes = (mytime >> 12 & 0xf)*10 + (mytime >> 8 & 0xf);
-    		int seconds = (mytime >> 4 & 0xf)*10 + (mytime & 0xf);
+	int minutes = (mytime >> 12 & 0xf)*10 + (mytime >> 8 & 0xf);
+    int seconds = (mytime >> 4 & 0xf)*10 + (mytime & 0xf);
 
-			if (seconds++ < 16 && not_done) {
-				set_leds(seconds);
-				if (seconds == 15)
-					not_done = 0;
-				}
-
-			if (seconds >= 60){
-					seconds = 0;
-					minutes++;
-					if (minutes >= 60) {
-						minutes = 0;
-						hours++;
-						if (hours >= 100) {
-							hours = 0;
-						}
-					}
-				}
-
-			update_display(hours, minutes, seconds);
-
-			tick( &mytime );
+	if (seconds++ < 16 && not_done) {
+		set_leds(seconds);
+		if (seconds == 15)
+			not_done = 0;
 		}
-	}
+
+	if (seconds == 60){
+			seconds = 0;
+			minutes++;
+			if (minutes == 60) {
+				minutes = 0;
+				hours++;
+				if (hours == 100) {
+					hours = 0;
+				}
+			}
+		}
+
 	if (get_btn()) {
 		int state = get_sw();
 		int dis = state >> 8;
@@ -164,7 +144,11 @@ int main() {
 				hours = state & 63;
 				break;
 		}
-		update_display(hours, minutes, seconds);
     }
+	update_display(hours, minutes, seconds);
+
+    tick( &mytime );
   }
 }
+
+
