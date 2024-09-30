@@ -32,10 +32,10 @@ int timeoutcount;
 /* Below is the function that will be called when an interrupt is triggered. */
 void handle_interrupt ( unsigned cause ) {
 	volatile unsigned short* timer = (volatile unsigned short*) 0x04000020;
-	*timer = 0;	// Återställer hela status registret, påverkar inte RUN-biten
+	*timer = 0;	// Återställer hela statusregistret, påverkar inte RUN-biten
 	if (++timeoutcount == 10) {
 		timeoutcount = 0;
-		counter_stuff();
+		counter_stuff();		// -v- "Kanske dålig readability :/" -v-
 		update_display(hours, (mytime >> 12 & 0xf)*10 + (mytime >> 8 & 0xf), (mytime >> 4 & 0xf)*10 + (mytime & 0xf));
 		tick( &mytime );
 	}
@@ -43,13 +43,13 @@ void handle_interrupt ( unsigned cause ) {
 
 void counter_stuff( void ) {
 	if (not_done && seconds < 16) {
-		seconds++;
+		seconds++;	// Behäver inte räkna alla sekunder när vi använder 'mytime'
 		set_leds(seconds);
-		if (seconds == 15)
+		if (seconds == 15) // Men behövs för leds... (:
 			not_done = 0;
 		}
-		if ((mytime >> 8 & 0xff) == 0 && (mytime & 0xff) == 0) {// || (mytime >> 8 & 0xff) == 0) {
-			hours++;
+		if ((mytime >> 8 & 0xff) == 0 && (mytime & 0xff) == 0) {
+			hours++;	// om 00 minuter och 00 sekunder så har det gått en timme
 			if (hours >= 100) {
 				hours = 0;
 			}
@@ -60,10 +60,10 @@ void counter_stuff( void ) {
 void labinit(void) {
 	// 3*10⁶ sek == 0000 0000 0010 1101 : 1100 0110 1100 0000 - 1 sek
 	volatile unsigned short* timer = (volatile unsigned short*) 0x04000020;
-	*(timer + 2*2) = (29999999/1000) & 0xffff;	// Fixa med unsigned short istället
-	*(timer + 3*2) = (29999999/1000) >> 16;
-	*(timer + 1*2) = 7;
-	enable_interrupt();
+	*(timer + 2*2) = (29999999/10) & 0xffff;
+	*(timer + 3*2) = (29999999/10) >> 16;
+	*(timer + 1*2) = 7;	// 0b0111; enable: start, cont, ITO (Interrupt TiomOut)
+	enable_interrupt(); // boot.S
 }
 
 void set_leds(int led_mask) {
@@ -120,11 +120,12 @@ void update_display(int hours, int minutes, int secs) {
 	set_displays(0, secs%10);
 }
 
-int main ( void ) {
-	labinit();
+int main ( void ) {	//WTF, ingen kallning till leds???? hUr fUNkAr?!?!?!?!
+	labinit();// <-(typ den dock)
 	while (1) {
-		print ("Prime: ");
 		prime = nextprime( prime );
+		print("\033[0F\033[J");		// \033 = ESC, [0F = flyttar cursor till början av raden 0 upp, [J = raderar allt efter cursor
+		print ("Prime: ");
 		print_dec( prime );
 		print("\n");
 	}
