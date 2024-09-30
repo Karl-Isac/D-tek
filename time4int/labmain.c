@@ -16,13 +16,12 @@ extern void enable_interrupt( void );
 void set_leds(int led_mask);
 void set_displays(int display_number, int value);
 void update_display(int hours, int minutes, int seconds);
-int get_sw( void );
+void counter_stuff( void );
 
 
 int prime = 1234567;
-int hours = 0;
-int minutes = 0;
 int seconds = 0;
+int hours = 0;
 int not_done = 1;
 
 int mytime = 0x5957;
@@ -37,53 +36,32 @@ void handle_interrupt ( unsigned cause ) {
 	if (++timeoutcount == 10) {
 		timeoutcount = 0;
 		counter_stuff();
+		update_display(hours, (mytime >> 12 & 0xf)*10 + (mytime >> 8 & 0xf), (mytime >> 4 & 0xf)*10 + (mytime & 0xf));
 		tick( &mytime );
-		update_display(hours, minutes, seconds);
 	}
 }
 
 void counter_stuff( void ) {
-	if (not_done && seconds++ < 16) {
+	if (not_done && seconds < 16) {
+		seconds++;
 		set_leds(seconds);
 		if (seconds == 15)
 			not_done = 0;
 		}
-
-	if (seconds >= 60){
-			seconds = 0;
-			minutes++;
-			if (minutes >= 60) {
-				minutes = 0;
-				hours++;
-				if (hours >= 100) {
-					hours = 0;
-				}
+		if ((mytime >> 8 & 0xff) == 0 && (mytime & 0xff) == 0) {// || (mytime >> 8 & 0xff) == 0) {
+			hours++;
+			if (hours >= 100) {
+				hours = 0;
 			}
 		}
-}
-
-void button_stuff( void ) {
-	int state = get_sw();
-	int dis = state >> 8;
-	switch(dis) {
-		case 1:
-			seconds = state & 63;
-			break;
-		case 2:
-			minutes = state & 63;
-			break;
-		case 3:
-			hours = state & 63;
-			break;
-	}
 }
 
 /* Add your code here for initializing interrupts. */
 void labinit(void) {
 	// 3*10⁶ sek == 0000 0000 0010 1101 : 1100 0110 1100 0000 - 1 sek
 	volatile unsigned short* timer = (volatile unsigned short*) 0x04000020;
-	*(timer + 2*2) = (29999999/10) & 0xffff;	// Fixa med unsigned short istället
-	*(timer + 3*2) = (29999999/10) >> 16;
+	*(timer + 2*2) = (29999999/1000) & 0xffff;	// Fixa med unsigned short istället
+	*(timer + 3*2) = (29999999/1000) >> 16;
 	*(timer + 1*2) = 7;
 	enable_interrupt();
 }
@@ -133,23 +111,13 @@ void set_displays(int display_number, int value) {
 	*display = in;
 }
 
-int get_sw( void )  {
-	volatile int* switches = (volatile int*) 0x04000010;
-	return *switches & 0x3ff;
-}
-
-int get_btn( void )  {
-	volatile int* button = (volatile int*) 0x040000d0;
-	return *button & 1;
-}
-
-void update_display(int hours, int minutes, int seconds) {
+void update_display(int hours, int minutes, int secs) {
 	set_displays(5, hours/10);
 	set_displays(4, hours%10);
 	set_displays(3, minutes/10);
 	set_displays(2, minutes%10);
-	set_displays(1, seconds/10);
-	set_displays(0, seconds%10);
+	set_displays(1, secs/10);
+	set_displays(0, secs%10);
 }
 
 int main ( void ) {
