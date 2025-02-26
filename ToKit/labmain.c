@@ -1,4 +1,5 @@
 extern void print(const char *str);
+extern void handle_interrupt();
 
 // 🔹 Move `Player` struct ABOVE function prototypes
 typedef struct {
@@ -16,6 +17,12 @@ typedef struct {
     int caffeinated;
     int productive;
 
+    // Items
+    int item1;
+    int item2;
+    int item3;
+    int item4;
+
 } Player;
 
 
@@ -25,7 +32,6 @@ void delay(unsigned int milli);
 void pretty_print(const char text[]);
 char get_choice();
 void print_status(Player *player);
-void game_status(Player *player);
 
 void morning_routine(Player *player);
 void choose_outfit(Player *player);
@@ -60,8 +66,17 @@ Player create_player() {
     p.caffeinated = 0;
     p.productive = 0;
     p.bloated = 0;
+
+
+    p.item1 = 0;
+    p.item2 = 0;
+    p.item3 = 0;
+    p.item4 = 0;
+
+
     return p;
 }
+
 
 
 
@@ -118,6 +133,23 @@ void print_status(Player *player) {
     
     print("\n");
 }
+
+// Function to check after every choice
+void lose_status_check(Player *player) {
+    if (player->energy <= 0) {
+        pretty_print("You're too tired to continue... You fall asleep at your desk.\n");
+        clocking_out(player);
+    }
+    if (player->cash <= 0) {
+        pretty_print("You're broke... You can't afford to go to work.\n");
+        clocking_out(player);
+    }
+    if (player->charisma <= 0) {
+        pretty_print("You're too awkward to talk to anyone... You hide in the bathroom.\n");
+        clocking_out(player);
+    }
+}
+
 
 // Function to get player's choice
 char get_choice() {
