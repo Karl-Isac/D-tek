@@ -67,7 +67,7 @@ Player create_player() {
     p.bloated = 0;
 
 
-    p.keycard = 0;
+    p.item1 = 0;
     p.item2 = 0;
     p.item3 = 0;
     p.item4 = 0;
@@ -154,69 +154,70 @@ void lose_status_check(Player *player) {
         pretty_print("You're broke... .\n");
         clocking_out(player);
     }
-    if (player->charisma <= 0) {
-        pretty_print("You're too awkward to talk to anyone... You hide in the bathroom.\n");
-        clocking_out(player);
-    }
 }
 
 
 
 
-    void morning_routine(Player *player) {
-        clear_screen();
-    
-        pretty_print("You wake up, but the alarm hasn't rung yet...\n");
-        pretty_print("Flip the switches to choose:\n");
-        pretty_print("SW8 → Snooze again\n");
-        pretty_print("SW9 → Get up from bed\n");
-        pretty_print("Press the button to confirm your choice...\n");
+void morning_routine(Player *player) {
+    clear_screen();
 
-        print("  \n");
-        print("  \n");
-        print("  ((  (__I__)  ))\n");
-        print("    .'_....._'.\n");
-        print("   / / .12 . \\ \\\n");
-        print("  | | '  |  ' | |\n");
-        print("  | | 9  /  3 | |\n");
-        print("   \\ \\ '.6.' / /\n");
-        print("    '.`-...-'.'\n");
-        print("    /'-- --'\\\n");
-        print("    `\"\"\"\"\"\"\"\"\"`\n");
-    
-    
-        int choice = -1;  // Initialize choice variable
-    
-        // Wait for the player to select a switch and press the button
-        while (choice == -1) {
-            choice = get_switches(2);  // Read SW9-SW8
-            if (get_btn()) {  // Confirm with button press
-                break;
-            }
-        }
-    
-        if (choice == 0b01) {  // SW8 ON → Snooze
-            int* randptr = (int*) 0x400042; // Adjusted memory reference
-            if ((*randptr) % 2 == 1) {  // 50% chance
-                pretty_print("You snoozed too much... You feel stressed.\n");
-                player->stressed = 1;
-            } else {
-                pretty_print("You wake up just before the alarm rings. You feel refreshed!\n");
-                player->energy += 10;
-            }
-        } else if (choice == 0b10) {  // SW9 ON → Get up immediately
-            pretty_print("Groggy and slouchy, you rise from the bed...\n");
-            player->energy -= 5;
+    pretty_print("You wake up, but the alarm hasn't rung yet...\n");
+    pretty_print("Flip the switches to choose:\n");
+    pretty_print("SW8 → Snooze again\n");
+    pretty_print("SW9 → Get up from bed\n");
+    pretty_print("Press the button to confirm your choice...\n");
 
-        } else {  // Invalid selection, retry
-            pretty_print("Invalid choice!\n");
-            morning_routine(player);
-            return;
+    print("  \n");
+    print("  \n");
+    print("  ((  (__I__)  ))\n");
+    print("    .'_....._'.\n");
+    print("   / / .12 . \\ \\\n");
+    print("  | | '  |  ' | |\n");
+    print("  | | 9  /  3 | |\n");
+    print("   \\ \\ '.6.' / /\n");
+    print("    '.`-...-'.'\n");
+    print("    /'-- --'\\\n");
+    print("    `\"\"\"\"\"\"\"\"\"`\n");
+
+    int choice = -1;  // Initialize choice variable
+
+    // Wait for valid input: exactly one switch must be flipped and button pressed
+    while (1) {
+        choice = get_switches(2);  // Read SW9-SW8
+        
+        if (get_btn()) {  // Confirm selection with button press
+            switch (choice) {
+                case 0b01: {  // SW8 ON → Snooze
+                    int* randptr = (int*) 0x400042; // Adjusted memory reference
+                    if ((*randptr) % 2 == 1) {  // 50% chance
+                        pretty_print("You snoozed too much... You feel stressed.\n");
+                        player->stressed = 1;
+                    } else {
+                        pretty_print("You wake up just before the alarm rings. You feel refreshed!\n");
+                        player->energy += 10;
+                    }
+                    break;
+                }
+
+                case 0b10:  // SW9 ON → Get up immediately
+                    pretty_print("Groggy and slouchy, you rise from the bed...\n");
+                    player->energy -= 5;
+                    break;
+
+                default:  // Invalid selection, retry
+                    pretty_print("Invalid choice! Flip only ONE switch and press the button.\n");
+                    continue; // Loop again instead of calling morning_routine() recursively
+            }
+            break; // Exit the while loop after a valid selection
         }
-    
-        player->clock += 1;
-        choose_outfit(player); // Move to the next stage
     }
+
+    player->clock += 1;
+    choose_outfit(player); // Move to the next stage
+    pretty_print("With heavy steps, you slowly approach the wardrobe...\n");
+}
+
     
 
 // **Choosing an Outfit**
@@ -232,19 +233,7 @@ void choose_outfit(Player *player) {
 
     //Print ASCII ART WARDROBE
     
-    if (choice == '1') {
-        pretty_print("You look sharp! People will respect you more today.\n");
-        player->charisma += 5;
-        player->cash -= 50;
-    } else if (choice == '2') {
-        pretty_print("You look casual and comfortable.\n");
-
-    } else if (choice == '3') {
-        pretty_print("You look like you just woke up... Maybe people will judge you.\n");
-        player->charisma -= 5;
-    } else {
-        pretty_print("Invalid choice!\n");
-    }
+   
     player->clock += 1;
     breakfast(player);
     pretty_print("This seems to be office appropiate doing an agreeable head gesture\n");
@@ -261,22 +250,7 @@ void breakfast(Player *player) {
     pretty_print("3. Leftover dinner\n");
 
     
-    if (choice == '1') {
-        pretty_print("A classic breakfast! You feel a bit more awake.\n");
-        player->energy += 10;
-        player->cash -=20;
-    } else if (choice == '2') {
-        pretty_print("You go out and light a cigarette...\n");
-        
-
-    } else if (choice == '3') {
-        pretty_print("That was delicious, but you stomach start to feel tight...\n");
-        player->energy += 20;
-        player->cash -=40;
-        player->bloated += 1; //This will affect later, farting during colleagues scene
-    } else {
-        pretty_print("Invalid choice!\n");
-    }
+    
     player->clock += 1;
     car_game(player);
     pretty_print("Checking that the oven is closed for the last time\n");
