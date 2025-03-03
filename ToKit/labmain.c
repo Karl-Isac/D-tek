@@ -1,5 +1,6 @@
 extern void print(const char *str);
 extern void handle_interrupt();
+//extern void read(char *, int);
 
 typedef struct {
     int energy;
@@ -35,21 +36,21 @@ void morning_routine(Player *player);
 void choose_outfit(Player *player);
 void breakfast(Player *player);
 
-void car_game(Player *player); //FPGA GAME /Lose Money
+//void car_game(Player *player); //FPGA GAME /Lose Money
 
 void parkinglot(Player *player);
 void desk(Player *player);
 void colleagues(Player *player);
 
-void office_game(Player *player); //FPGA GAME / Lose Energy
+//void office_game(Player *player); //FPGA GAME / Lose Energy
 
 void lunch(Player *player);
 void toilet(Player *player);
 void desk2(Player *player);
 
-void office_game2(Player *player); //FPGA GAME /Lose Something
+//void office_game2(Player *player); //FPGA GAME /Lose Something
 
-void clocking_out(Player *player);
+//void clocking_out(Player *player);
 
 
 // Function to initialize a player with default stats
@@ -89,21 +90,25 @@ int get_btn( void )  {
 	return *button & 1;	// Tar ut LSB som ger statur på button
 }
 
+void handle_interrupt() {}
+void read(char *, int){}
 
 // Function to clear the screen
 void clear_screen() {
     print("\033[2J\033[H");
 }
 
-// Pretty Print Function: Creates slow typewriter effect
 void pretty_print(const char text[]) {
     char out;
+    char p[2];  // ✅ Small buffer to hold one character + null terminator
     const char* ptr = text;
+
     while ((out = *(ptr++)) != '\0') {
-        char* p;
-        *p = out;
-        *(p+1) = '\0';
-        print(p);
+        p[0] = out;  // ✅ Store character in safe memory
+        p[1] = '\0';  // ✅ Null-terminate the string
+        print(p);  // ✅ Safe printing
+
+        // Add delays for punctuation
         if (out == '.' || out == ',' || out == ':' || out == '!' || out == '?')
             delay(120);
         else
@@ -111,9 +116,10 @@ void pretty_print(const char text[]) {
     }
 }
 
+
 // Delay function for slow printing
 void delay(unsigned int milli) {
-    unsigned int one = 1600000; 
+    unsigned int one = 30000; 
     for (int i = 0; i < milli; i++) {
         for (int j = 0; j < one; j++) {
             asm volatile ("nop");
@@ -144,6 +150,7 @@ void print_status(Player *player) {
     print("\n");
 }
 
+/*
 // Function to check after every choice
 void lose_status_check(Player *player) {
     if (player->energy <= 0) {
@@ -156,7 +163,7 @@ void lose_status_check(Player *player) {
     }
 }
 
-
+*/
 
 
 void morning_routine(Player *player) {
@@ -212,10 +219,9 @@ void morning_routine(Player *player) {
             break; // Exit the while loop after a valid selection
         }
     }
-
-    player->clock += 1;
-    choose_outfit(player); // Move to the next stage
     pretty_print("With heavy steps, you slowly approach the wardrobe...\n");
+    player->clock += 1;
+    
 }
 
     
@@ -227,15 +233,15 @@ void choose_outfit(Player *player) {
     print("  \n");
     print("  \n");
     pretty_print("What will you wear today?\n");
+
     pretty_print("1. Fancy suit with fedora\n"); //Item in one of the outfits choices
     pretty_print("2. Sweatpants and sweatshirt\n");
-    pretty_print("3. \n");
+    pretty_print("3. T-shirt and some jeans\n");
 
     //Print ASCII ART WARDROBE
     
    
     player->clock += 1;
-    breakfast(player);
     pretty_print("This seems to be office appropiate doing an agreeable head gesture\n");
     pretty_print("With newfound energy you take a stride directly to the kitchen\n");
 }
@@ -252,12 +258,13 @@ void breakfast(Player *player) {
     
     
     player->clock += 1;
-    car_game(player);
     pretty_print("Checking that the oven is closed for the last time\n");
     pretty_print("You leave ur apartment and enters the car\n");
 
 
 }
+
+/*
 
 void car_game(Player *player) {
     pretty_print("Game mode: tutorial");
@@ -315,17 +322,24 @@ void colleagues(Player *player) {
     pretty_print("3. Approach your bully\n");
 
     player->clock += 1;
-    office_game(player);
+    //office_game(player);
 }
 
+*/
 
 
 //Start
 int main() {
 
-    Player player = create_player(); // Initialize player, create the object
-
-    morning_routine(&player); // Start game flow
+    //Player player = create_player(); // Initialize player, create the object
+    char output[20]; // Adjusted memory reference
+    read(output, 20);
+    print(output);
+    clear_screen();
+    
+    //morning_routine(&player); // Start game flow
+    //choose_outfit(&player); // Move to the next stage
+    //breakfast(&player); // Move to the next stage
 
     return 0;
 }
