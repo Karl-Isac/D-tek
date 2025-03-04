@@ -1,59 +1,5 @@
-extern void print(const char *str);
-extern void handle_interrupt();
-//extern void read(char *, int);
-
-typedef struct {
-    int energy;
-    int cash;
-    int charisma;
-    int clock;
-    
-    // negative effects 
-    int stressed;
-    int sleepy;
-    int bloated;
-
-    // positive effects
-    int caffeinated;
-    int productive;
-
-    // Items
-    int item1;
-    int item2;
-    int item3;
-    int item4;
-
-} Player;
-
-void clear_screen();
-void delay(unsigned int milli);
-void pretty_print(const char text[]);
-void set_leds(int led_mask);
-void print_status(Player *player);
-
-
-//////////////////GAME FUNCTIONS////////////////////
-void morning_routine(Player *player);
-void choose_outfit(Player *player);
-void breakfast(Player *player);
-
-//void car_game(Player *player); //FPGA GAME /Lose Money
-
-void parkinglot(Player *player);
-void desk(Player *player);
-
-//void office_game(Player *player); //FPGA GAME / Lose Energy
-
-void lunch(Player *player);
-void toilet(Player *player);
-
-//void terminal_game(Player *player);
-
-void clocking_out(Player *player); 
-void game_over(Player *player);
-
-
-
+#include "labmain.h"
+#include "coffee.h"
 
 // Function to initialize a player with default stats
 Player create_player() {
@@ -88,16 +34,21 @@ int get_switches(int num_switches) {
     return (*switches); // Return all switches if num_switches is 0
 }
 
-
-
-
 int get_btn( void )  {
 	volatile char* button = (volatile char*) 0x040000d0;
 	return *button & 1;	// Tar ut LSB som ger statur på button
 }
 
-void handle_interrupt() {}
-//void read(char *, int){}
+void handle_interrupt ( unsigned cause ) {
+    if (coffee == 0) {
+        print("You are out of coffee!!!\n");
+        return;
+    }
+    coffee--;
+    c_energy = 10;
+    display_energy();
+    set_coffee();
+}
 
 
 void clear_screen() {
@@ -403,7 +354,81 @@ void breakfast(Player *player) {
 
 ///////////CAR GAME HERE////////////
 
+void draw_road(int progress, int* krockar, int player_lane) {
+    clear_screen();
+    for (int i = ROAD_HEIGHT + progress - 1; i > progress; i--) {
+        print("| ");
+        char out = (enemy_lanes[i*3] == '0') ? ' ' : enemy_lanes[i];
+        print(out);
+        print(" | ");
+        out = (enemy_lanes[i*3 + 1] == '0') ? ' ' : enemy_lanes[i];
+        print(out);
+        print(" | ");
+        out = (enemy_lanes[i*3 + 2] == '0') ? ' ' : enemy_lanes[i];
+        print(out);
+        print(" |");
+        print("\n");
+    }
+    print("| ");
+    for (int i = progress*3; i < progress*3 + 3; i++) {
+        if (i == player_lane) {
+            print("A");
+            if (enemy_lanes[i] != '0') (*krockar)++;
+        } else {
+            char out = (enemy_lanes[i] == '0') ? ' ' : enemy_lanes[i];
+            print(out);
+        }
+        print(" | ");
+    }
+}
 
+int get_switches_event() {
+    volatile int* switches = (volatile int*) 0x04000010;
+    int ret =  *(switches + 3);
+    *(switches + 3) = 0;
+    if (ret & 1) return 2;
+    if (ret & (1 << 9)) return 1;
+    return 0;
+}
+
+void display_krockar(int krockar) {
+    int foo = 1;
+    if (krockar >= 10) foo = 1023;
+    else {
+        for (int i = 1; i <= krockar; i++)
+            foo *= 2;
+        foo -= 1;
+    }
+    set_leds(foo);
+}
+
+void car_game(Player *player) {
+    pretty_print("Time to drive to work\nFlip SWI9 to turn left and SWI0 to turn right.\nAvoid the cars.");
+    delay(300);
+    clear_screen();
+    int dir;
+    int player_lane = 1; // Start in the middle lane
+    int progress = 0;
+    int krockar = 0;
+    while (progress < 100) {
+        delay(150);
+        if ((dir = get_switches_event()) != 0) {
+            if (dir == 1 && player_lane > 0) player_lane--;
+             else if (player_lane < NUM_LANES - 1) player_lane++;
+        }
+        draw_road(progress, &krockar, player_lane);
+        progress++;
+        display_krockar(krockar);
+    }
+    if (krockar != 0) {
+        pretty_print("You crashed ");
+        print_dec(krockar);
+        pretty_print(" times and each crash costed 100 currency\nHope you had enough :/");
+        player->cash -= 100 * krockar;
+        if (player->cash < 0) game_over(player);
+    }
+}
+/////////////////////////////////////
 void parkinglot(Player *player) {
     clear_screen();
     print_status(player);
@@ -484,18 +509,18 @@ void desk(Player *player) {
     print("  \n");
     pretty_print("You arrive at your desk. Boot up your computer as time passes...\n");
 
-print("::::==========:::::::::::::::::::::::::::::::::::::::::::::::::::::::\n");
-print(":::::::=========::::::.---------------.:::::::::::::::::::::::::::::::\n");
-print(":::=============::::::| .-----------. |:::::::::::::::::::::::::::::\n");
-print("::::==========::::::::| | === == == | |:::::::::::::::::::::::::::::::::\n");
-print("::::==========::::::::| | EMAIL  DO | |:::::::::::::::::::::::::::::::\n");
-print(":::::::=========='::::| |  urgent!  | |:::::::::::::::::::::::::::::\n");
-print(":::===========::::::::| |___________| |::::::((;):::::::::::::::::::::\n");
-print("''''============''''''|___________oo__|\"\")'''';(\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\n");
-print("  ==========='           ___)___(___,o  (   .---._\n");
-print("     ===========        |___________| 8  \\ |TEA|_)    .+-------+.\n");
-print("  ===========                     o8o8    ) |___|    .' |_______| `.\n");
-print("_______________________________________________________________________\n");
+    print("::::==========:::::::::::::::::::::::::::::::::::::::::::::::::::::::\n");
+    print(":::::::=========::::::.---------------.:::::::::::::::::::::::::::::::\n");
+    print(":::=============::::::| .-----------. |:::::::::::::::::::::::::::::\n");
+    print("::::==========::::::::| | === == == | |:::::::::::::::::::::::::::::::::\n");
+    print("::::==========::::::::| | EMAIL  DO | |:::::::::::::::::::::::::::::::\n");
+    print(":::::::=========='::::| |  urgent!  | |:::::::::::::::::::::::::::::\n");
+    print(":::===========::::::::| |___________| |::::::((;):::::::::::::::::::::\n");
+    print("''''============''''''|___________oo__|\"\")'''';(\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\n");
+    print("  ==========='           ___)___(___,o  (   .---._\n");
+    print("     ===========        |___________| 8  \\ |TEA|_)    .+-------+.\n");
+    print("  ===========                     o8o8    ) |___|    .' |_______| `.\n");
+    print("_______________________________________________________________________\n");
 
     print("  \n");
     print("  \n");
@@ -536,6 +561,144 @@ print("_______________________________________________________________________\n
 }
 
 ///////////COFFEE GAME HERE////////////
+
+void display_energy() {
+    int foo = 1;
+    if (c_energy >= 10) foo = 1023;
+    else {
+        for (int i = 1; i <= c_energy; i++)
+            foo *= 2;
+        foo -= 1;
+    }
+    set_leds(foo);
+}
+
+void print_sak(const char* bild[]) {
+    clear_screen();
+    int i = 0;
+    while(meeting[i] != 0)
+        print(bild[i++]);
+}
+
+void set_coffee() {
+    close_display();
+    volatile char* display = (volatile char*) 0x4000050;
+    if (coffee == 1) {
+        *display = 0b11000000;
+        return;
+    }
+    *display = 0b11110000;
+    int i = 2;
+    while (i < coffee) {
+        display += 0x10;
+        *display = 0b11110110;
+    }
+    display += 0x10;
+    *display = 0b11000110;
+}
+
+void coffee_game(Player *player) {
+    __asm__ volatile (
+        "csrsi mie, 18\n\t"      // Set bit 18 in the mie register (enable interrupt)
+        "csrsi mstatus, 3\n\t"   // Set bits 0 and 1 in mstatus (enable global interrupts)
+    );
+    pretty_print("It is time for a meeting.      \nFuck          \n\nThis will seriosly drain your energy, but you have a cup of coffee to keep up you energy :)\n");
+    set_coffee();
+    pretty_print("Press BTN to take a sip of coffee.        \nBut don't drink too fast, you only have one cup for the entire meeting.\n");
+    display_energy();
+    pretty_print("You can see how much energy you have on the LEDs");
+    delay(300);
+    print_sak(meeting);
+    delay(700);
+    for (int i = 0; i < 15; i++) {
+        print_sak(boss3);
+        delay(100);
+        print_sak(boss0);
+        delay(100);
+        print_sak(boss1);
+        delay(100);
+        print_sak(boss2);
+        c_energy--;
+        display_energy();
+        delay(150);
+    }
+    print_sak(funny);
+    pretty_print("Your favorite colleague has shared a funny anecdote.          \n");
+    c_energy = (c_energy < 10) ? c_energy + 3 : 10;
+    pretty_print("Thank god!!! You gain some energy back.    ");
+    display_energy();
+    for (int i = 0; i < 12; i++) {
+        print_sak(boss3);
+        print("Back to buisness...");
+        delay(100);
+        print_sak(boss0);
+        print("Back to buisness...");
+        delay(100);
+        print_sak(boss1);
+        print("Back to buisness...");
+        delay(100);
+        print_sak(boss2);
+        print("Back to buisness...");
+        c_energy--;
+        display_energy();
+        delay(150);
+    }
+
+    print_sak(boring);
+    pretty_print("EEUGHH!!! The colleague you don't like is telling a SUPER BORING pointless story\nYou loose half of your energy (rounded down)!\n");
+    c_energy /= 2;
+    display_energy();
+
+    print_sak(meeting);
+    pretty_print("Your boss somehow became extra boring\nYou now loose energy faster\n");
+    delay(150);
+    for (int i = 0; i < 12; i++) {
+        print_sak(boss3);
+        print("Back to buisness...");
+        delay(100);
+        print_sak(boss0);
+        print("Back to buisness...");
+        delay(100);
+        c_energy--;
+        display_energy();
+        print_sak(boss1);
+        print("Back to buisness...");
+        delay(100);
+        print_sak(boss2);
+        print("Back to buisness...");
+        c_energy--;
+        display_energy();
+        delay(150);
+    }
+    __asm__ volatile (
+        "csrsi mstatus, 0\n\t"   // de-Set bits 0 and 1 in mstatus (enable global interrupts)
+    );
+    print_sak(question);
+    delay(50);
+    pretty_print("You just got a question...\nHurry up and answer!\nYou have 3 seconds to switch SW4 to answer correctly\n");
+    pretty_print("3... ");
+    delay(600); // 1000 - (3*120 + 20*2)
+    pretty_print("2... ");
+    delay(600);
+    pretty_print("1... ");
+    delay(600);
+    int res = get_switches(0) & (1 << 4);
+    if (res) {
+        print_sak(question_good);
+        pretty_print("Good job :)\nYou gained +2 charisma.");
+        player->charisma += 2;
+    } else {
+        print_sak(question_bad);
+        pretty_print("PAY ATTENTION");
+        print("*player_name*");
+        pretty_print("!!!\nThis is very bad for your image. -10 charisma!");
+        player->charisma -= 10;
+    }
+    delay(100);
+    clear_screen();
+    pretty_print("The meeting is now over. *Phew*\nBut you lost some energy...");
+    player->energy += c_energy - 10;
+}
 
 
 
@@ -661,14 +824,16 @@ void game_over(Player *player) {
 
     if (player->energy <= 0) {
         pretty_print("You're too tired to continue... You fall asleep at your desk.\n");
-        pretty_print("Better luck next time....!\n");
+    }
 
+    if (player->charisma <= 0) {
+        pretty_print("You're hated by all of your colleagues... You get fired!\n");
     }
 
     if (player->cash <= 0) {
         pretty_print("You're broke... .\n");
-        pretty_print("Better luck next time....!\n");
     }
+    pretty_print("Better luck next time....!\n");
     print("\n");
     print("\n");
     print("\n");
@@ -689,7 +854,7 @@ void game_over(Player *player) {
     print("⠀⠀⠀⠹⣿⣿⣶⣾⣿⣿⣿⠟⠁⠀⠸⢿⣿⠇⠀⠀⠀⠛⠛⠁⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀\n");
     print("⠀⠀⠀⠀⠈⠙⠛⠛⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\n");
 
-    
+    exit();
 }
 
 
