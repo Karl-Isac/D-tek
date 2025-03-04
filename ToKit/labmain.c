@@ -167,6 +167,13 @@ void print_status(Player *player) {
 }
 
 void scene_init(Player *player) {
+
+    if (player->energy <= 0) {
+        game_over(player);
+    }
+    if (player->cash <= 0) {
+        game_over(player);
+    }
     clear_screen();
     print_status(player);
     print("  \n");
@@ -189,22 +196,6 @@ void close_display() {
         *display = 0b11111111;
     }
 }
-
-/*
-// Function to check after every choice
-void lose_status_check(Player *player) {
-    if (player->energy <= 0) {
-        pretty_print("You're too tired to continue... You fall asleep at your desk.\n");
-        clocking_out(player);
-    }
-    if (player->cash <= 0) {
-        pretty_print("You're broke... .\n");
-        clocking_out(player);
-    }
-}
-
-*/
-
 
 void morning_routine(Player *player) {
     scene_init(player);
@@ -477,8 +468,35 @@ void clocking_out(Player *player) {
 
     pretty_print("You're finally done for the day. You clock out and head home...\n");
     pretty_print("You survived another day at the office!\n");
-
+    pretty_print("You raise your fists in the air in triumph!\n");
     print("  \n");
+    print("  \n");
+
+
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⡾⢛⢻⣷⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⢀⣾⣟⠛⢿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣿⠋⠰⡀⢎⣿⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⢸⣿⠀⠎⠠⡙⣿⡄⠀⠀⢀⣀⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⡿⣷⣦⣴⣏⣽⡟⠡⠌⡱⠈⡼⣿⣀⡀⠀⠀⠀\n");
+    print("⠀⢀⣴⡾⢿⣌⠌⡁⢆⠹⣿⣄⣠⣿⠛⠯⣝⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣇⠐⡈⢿⣿⣿⡟⠁⢆⠱⢀⡱⡝⢉⡉⢿⣦⠀⠀\n");
+    print("⢀⣿⠇⡐⡈⠻⣦⠁⢂⠆⠻⣿⣿⡃⢉⠔⣫⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⢿⣎⠰⢈⠙⡋⢅⠊⡄⠢⡁⡑⢠⠂⠔⣈⣿⠆⠀\n");
+    print("⠐⣿⡜⢠⠐⡡⢠⠘⠤⡈⠔⣈⢉⠰⠈⡜⣼⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣷⡆⠡⠒⡌⠰⣀⠣⠐⢌⢂⠩⡐⢬⠿⣦⡄\n");
+    print("⠀⢙⣿⣷⠆⡑⢠⠉⡐⢡⠊⠔⢂⠙⣲⣼⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣷⣥⠁⢆⠱⠀⢆⠩⠄⢊⠰⠐⣂⠰⢘⣿\n");
+    print("⠘⣿⡏⢀⠢⡑⢂⠡⡘⢠⠑⡌⢂⠒⣼⡟⠀⠀⠀⣀⣤⣤⣶⣶⣶⣶⣶⣦⣴⣤⣤⣄⣀⠈⠻⣷⣤⡂⢉⠢⠘⡈⠆⠡⠃⢄⠒⣼⡿\n");
+    print("⠀⠹⣷⣌⠄⡑⡈⠆⡑⢂⠢⠐⣬⣾⠟⢁⣤⣾⠿⠛⢋⢹⣷⠖⡠⢷⣆⡐⡈⢉⢉⡙⠛⠿⢷⣮⣝⠻⣷⣶⣥⣦⣬⣥⣼⣤⣾⠟⠁\n");
+    print("⠀⠀⠈⠙⠻⢷⣌⣄⢡⣢⣴⣿⠟⢉⣴⡟⠋⠄⣂⣡⣾⡿⢋⠰⠀⢭⡻⢷⣷⣬⣤⣀⣃⣐⠂⡉⠛⢷⣦⠈⠉⠉⠉⠉⠛⠋⠁⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠙⠛⠛⠛⠉⢀⣴⡟⠳⠶⢷⠾⠟⠫⣵⣯⡔⢎⡱⢾⣷⣤⡈⢉⠍⠛⠛⢋⡐⠡⢘⡀⠛⣿⣄⠀⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣾⠋⠤⠡⠌⡄⠢⣬⣿⣿⣏⡜⣪⡑⢯⣿⣿⣿⣦⢈⠢⢑⠢⡘⢄⠃⠤⠑⡈⢿⣦⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⡿⠁⢎⡐⠡⢊⣤⣷⣿⣿⣻⠟⡭⠵⢭⡋⠿⣽⣿⣿⣷⣦⣆⣂⣁⠢⠘⢠⠃⠌⢊⢿⡆⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⠃⡍⠰⣰⣿⣿⣿⠿⣿⢶⠏⡟⢬⡙⢦⡍⢧⡙⢷⣽⣻⡿⢿⣿⣿⣿⣇⠂⠜⡈⠔⣺⣿⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⣼⡟⢰⡈⠌⣿⡟⡭⢎⡽⣿⠀⠛⡬⢣⡙⣆⠞⡦⠙⠆⢌⢹⣯⡓⢶⡘⣾⣯⠀⢣⠘⡠⢹⣿⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⣿⡇⢺⡐⡈⣿⡽⣘⢧⣚⣿⠀⢍⣰⣦⣷⣾⣶⣶⣭⡐⢨⠸⣷⡹⢲⡹⢼⣷⠈⢄⠣⢐⣩⣿⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⣿⡣⠥⡃⢌⣿⡵⣩⠶⣩⣿⣠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⡘⣿⡱⣏⡜⣻⣯⠐⣈⠒⡄⢺⣿⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⣿⡇⠒⡅⠢⣿⢖⡭⢳⡱⣯⣿⣿⡿⣟⣯⢟⣽⣻⣿⣿⣿⣿⡽⣱⠞⡼⣹⣷⠐⢠⢃⢞⣽⠇⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⢿⣯⠁⡆⠡⣿⠞⣜⢧⡹⣾⣿⣿⣿⠿⠿⠿⢷⣷⣿⣿⣿⣿⣧⠹⣞⡱⢣⣿⠀⡡⢎⣾⠏⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣇⡘⠠⣿⡛⡼⢢⣓⣿⠟⡉⠄⣂⠆⢒⠠⡀⠌⡙⠛⣛⣮⣓⠮⣕⣻⡏⡰⣴⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣦⡄⠻⣿⡇⢣⡿⠃⢠⠃                                       \n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣦⡄⠻⣿⡇⢣⡿⠃                                       \n");
+  
     print("  \n");
 
 }
