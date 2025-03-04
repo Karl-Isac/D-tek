@@ -25,13 +25,14 @@ typedef struct {
 
 } Player;
 
-
 void clear_screen();
 void delay(unsigned int milli);
 void pretty_print(const char text[]);
 void set_leds(int led_mask);
 void print_status(Player *player);
 
+
+//////////////////GAME FUNCTIONS////////////////////
 void morning_routine(Player *player);
 void choose_outfit(Player *player);
 void breakfast(Player *player);
@@ -46,12 +47,10 @@ void desk(Player *player);
 void lunch(Player *player);
 void toilet(Player *player);
 
-void terminal_game(Player *player);
+//void terminal_game(Player *player);
 
-void clocking_out(Player *player); // Win condition you survive another day
-// Loop again in the morning routine as joke
-
-void game_over();
+void clocking_out(Player *player); 
+void game_over(Player *player);
 
 
 
@@ -82,8 +81,13 @@ Player create_player() {
 
 int get_switches(int num_switches) {
     volatile int* switches = (volatile int*) 0x04000010; 
-    return (*switches) & ((1 << num_switches) - 1);  // Mask the lowest `num_switches` bits
+
+    if (num_switches > 0) {
+        return (*switches) & ((1 << num_switches) - 1);  // Mask the lowest `num_switches` bits
+    }
+    return (*switches); // Return all switches if num_switches is 0
 }
+
 
 
 
@@ -180,13 +184,20 @@ void scene_init(Player *player) {
     print("  \n");
 }
 
-int timer_init() {
+void timer_init(void) {
     volatile unsigned short* timer = (volatile unsigned short*) 0x04000020;
     *(timer + 2*2) = (29999999/10) & 0xffff;
     *(timer + 3*2) = (29999999/10) >> 16;
-    *(timer + 1*2) = 7;	// 0b0111; enable: start, cont, ITO (Interrupt TiomOut)
-    return 0;
+    *(timer + 1*2) = 6;	// 0b0111; enable: start, cont, NOT ITO (Interrupt TiomOut)
 }
+
+int get_random_bit() {
+    volatile int* snapl = (volatile int*) (0x04000020 + 4);  
+    int lower = *snapl;   // Read lower 16-bits
+    return lower & 1;  // Combine into full 32-bit value
+}
+
+
 
 void close_display() {
 	volatile char* display = (volatile char*) 0x4000050;
@@ -227,7 +238,7 @@ void morning_routine(Player *player) {
             switch (choice) {
                 case 0b01: {  // SW0 ON → Snooze
                     //int* randptr = (int*) 0x400042; // Adjusted memory reference
-                    if (1+1 == 2) {  // 50% chance
+                    if (1) {  // 50% chance
                         pretty_print("You snoozed too much... You feel stressed.\n");
                         player->stressed = 1;
                     } else {
@@ -390,19 +401,8 @@ void breakfast(Player *player) {
 }
 }
 
+///////////CAR GAME HERE////////////
 
-/*
-void car_game(Player *player) {
-    pretty_print("Game mode: tutorial");
-
-
-
-    player->clock += 1;
-    pretty_print("As you can see the office in the horizon, the weight on the shoulder is increasing...\n");
-    parkinglot(player);
-
-}
-    */
 
 void parkinglot(Player *player) {
     clear_screen();
@@ -443,16 +443,19 @@ void parkinglot(Player *player) {
     if (get_btn()){
         switch (choice)
         {
-        case 0b01:
+        case 0b001:
             /* code */
             break;
         
-        case 0b10:
+        case 0b010:
             /* code */
             break;
-        
-        default:  // Invalid selection, retry
-            pretty_print("Invalid choice! Flip only ONE switch and press the button.\n");
+        case 0b100:
+            /* code */
+            break;
+
+        default:  
+            error_message();
             continue; // Loop again instead of calling breakfast() recursively
         }
         break; // Exit the while loop after a valid selection
@@ -463,92 +466,8 @@ void parkinglot(Player *player) {
 }
 }
 
-void clocking_out(Player *player) {
-    scene_init(player);
-
-    pretty_print("You're finally done for the day. You clock out and head home...\n");
-    pretty_print("You survived another day at the office!\n");
-    pretty_print("You raise your fists in the air in triumph!\n");
-    print("  \n");
-    print("  \n");
-
-
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⡾⢛⢻⣷⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⢀⣾⣟⠛⢿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣿⠋⠰⡀⢎⣿⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⢸⣿⠀⠎⠠⡙⣿⡄⠀⠀⢀⣀⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⡿⣷⣦⣴⣏⣽⡟⠡⠌⡱⠈⡼⣿⣀⡀⠀⠀⠀\n");
-    print("⠀⢀⣴⡾⢿⣌⠌⡁⢆⠹⣿⣄⣠⣿⠛⠯⣝⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣇⠐⡈⢿⣿⣿⡟⠁⢆⠱⢀⡱⡝⢉⡉⢿⣦⠀⠀\n");
-    print("⢀⣿⠇⡐⡈⠻⣦⠁⢂⠆⠻⣿⣿⡃⢉⠔⣫⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⢿⣎⠰⢈⠙⡋⢅⠊⡄⠢⡁⡑⢠⠂⠔⣈⣿⠆⠀\n");
-    print("⠐⣿⡜⢠⠐⡡⢠⠘⠤⡈⠔⣈⢉⠰⠈⡜⣼⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣷⡆⠡⠒⡌⠰⣀⠣⠐⢌⢂⠩⡐⢬⠿⣦⡄\n");
-    print("⠀⢙⣿⣷⠆⡑⢠⠉⡐⢡⠊⠔⢂⠙⣲⣼⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣷⣥⠁⢆⠱⠀⢆⠩⠄⢊⠰⠐⣂⠰⢘⣿\n");
-    print("⠘⣿⡏⢀⠢⡑⢂⠡⡘⢠⠑⡌⢂⠒⣼⡟⠀⠀⠀⣀⣤⣤⣶⣶⣶⣶⣶⣦⣴⣤⣤⣄⣀⠈⠻⣷⣤⡂⢉⠢⠘⡈⠆⠡⠃⢄⠒⣼⡿\n");
-    print("⠀⠹⣷⣌⠄⡑⡈⠆⡑⢂⠢⠐⣬⣾⠟⢁⣤⣾⠿⠛⢋⢹⣷⠖⡠⢷⣆⡐⡈⢉⢉⡙⠛⠿⢷⣮⣝⠻⣷⣶⣥⣦⣬⣥⣼⣤⣾⠟⠁\n");
-    print("⠀⠀⠈⠙⠻⢷⣌⣄⢡⣢⣴⣿⠟⢉⣴⡟⠋⠄⣂⣡⣾⡿⢋⠰⠀⢭⡻⢷⣷⣬⣤⣀⣃⣐⠂⡉⠛⢷⣦⠈⠉⠉⠉⠉⠛⠋⠁⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠙⠛⠛⠛⠉⢀⣴⡟⠳⠶⢷⠾⠟⠫⣵⣯⡔⢎⡱⢾⣷⣤⡈⢉⠍⠛⠛⢋⡐⠡⢘⡀⠛⣿⣄⠀⠀⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣾⠋⠤⠡⠌⡄⠢⣬⣿⣿⣏⡜⣪⡑⢯⣿⣿⣿⣦⢈⠢⢑⠢⡘⢄⠃⠤⠑⡈⢿⣦⠀⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⡿⠁⢎⡐⠡⢊⣤⣷⣿⣿⣻⠟⡭⠵⢭⡋⠿⣽⣿⣿⣷⣦⣆⣂⣁⠢⠘⢠⠃⠌⢊⢿⡆⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⠃⡍⠰⣰⣿⣿⣿⠿⣿⢶⠏⡟⢬⡙⢦⡍⢧⡙⢷⣽⣻⡿⢿⣿⣿⣿⣇⠂⠜⡈⠔⣺⣿⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⣼⡟⢰⡈⠌⣿⡟⡭⢎⡽⣿⠀⠛⡬⢣⡙⣆⠞⡦⠙⠆⢌⢹⣯⡓⢶⡘⣾⣯⠀⢣⠘⡠⢹⣿⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⣿⡇⢺⡐⡈⣿⡽⣘⢧⣚⣿⠀⢍⣰⣦⣷⣾⣶⣶⣭⡐⢨⠸⣷⡹⢲⡹⢼⣷⠈⢄⠣⢐⣩⣿⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⣿⡣⠥⡃⢌⣿⡵⣩⠶⣩⣿⣠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⡘⣿⡱⣏⡜⣻⣯⠐⣈⠒⡄⢺⣿⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⣿⡇⠒⡅⠢⣿⢖⡭⢳⡱⣯⣿⣿⡿⣟⣯⢟⣽⣻⣿⣿⣿⣿⡽⣱⠞⡼⣹⣷⠐⢠⢃⢞⣽⠇⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⢿⣯⠁⡆⠡⣿⠞⣜⢧⡹⣾⣿⣿⣿⠿⠿⠿⢷⣷⣿⣿⣿⣿⣧⠹⣞⡱⢣⣿⠀⡡⢎⣾⠏⠀⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣇⡘⠠⣿⡛⡼⢢⣓⣿⠟⡉⠄⣂⠆⢒⠠⡀⠌⡙⠛⣛⣮⣓⠮⣕⣻⡏⡰⣴⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣦⡄⠻⣿⡇⢣⡿⠃⢠⠃                                       \n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣦⡄⠻⣿⡇⢣⡿⠃                                       \n");
-  
-    print("  \n");
-
-}
-
-void game_over(Player *player) {
-    clear_screen();
-
-    if (player->energy <= 0) {
-        pretty_print("You're too tired to continue... You fall asleep at your desk.\n");
-        pretty_print("Better luck next time....!\n");
-
-    }
-
-    if (player->cash <= 0) {
-        pretty_print("You're broke... .\n");
-        pretty_print("Better luck next time....!\n");
-    }
-    print("\n");
-    print("\n");
-    print("\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⡀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⣤⠀⠀⠀⢀⣴⣿⡶⠀⣾⣿⣿⡿⠟⠛⠁\n");
-    print("⠀⠀⠀⠀⠀⠀⣀⣀⣄⣀⠀⠀⠀⠀⣶⣶⣦⠀⠀⠀⠀⣼⣿⣿⡇⠀⣠⣿⣿⣿⠇⣸⣿⣿⣧⣤⠀⠀⠀\n");
-    print("⠀⠀⢀⣴⣾⣿⡿⠿⠿⠿⠇⠀⠀⣸⣿⣿⣿⡆⠀⠀⢰⣿⣿⣿⣷⣼⣿⣿⣿⡿⢀⣿⣿⡿⠟⠛⠁⠀⠀\n");
-    print("⠀⣴⣿⡿⠋⠁⠀⠀⠀⠀⠀⠀⢠⣿⣿⣹⣿⣿⣿⣿⣿⣿⡏⢻⣿⣿⢿⣿⣿⠃⣼⣿⣯⣤⣴⣶⣿⡤⠀\n");
-    print("⣼⣿⠏⠀⣀⣠⣤⣶⣾⣷⠄⣰⣿⣿⡿⠿⠻⣿⣯⣸⣿⡿⠀⠀⠀⠁⣾⣿⡏⢠⣿⣿⠿⠛⠋⠉⠀⠀⠀\n");
-    print("⣿⣿⠲⢿⣿⣿⣿⣿⡿⠋⢰⣿⣿⠋⠀⠀⠀⢻⣿⣿⣿⠇⠀⠀⠀⠀⠙⠛⠀⠀⠉⠁⠀⠀⠀⠀⠀⠀⠀\n");
-    print("⠹⢿⣷⣶⣿⣿⠿⠋⠀⠀⠈⠙⠃⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠈⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣤⣴⣶⣦⣤⡀⠀\n");
-    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⡀⠀⠀⠀⠀⠀⠀⠀⣠⡇⢰⣶⣶⣾⡿⠷⣿⣿⣿⡟⠛⣉⣿⣿⣿⠆\n");
-    print("⠀⠀⠀⠀⠀⠀⢀⣤⣶⣿⣿⡎⣿⣿⣦⠀⠀⠀⢀⣤⣾⠟⢀⣿⣿⡟⣁⠀⠀⣸⣿⣿⣤⣾⣿⡿⠛⠁⠀\n");
-    print("⠀⠀⠀⠀⣠⣾⣿⡿⠛⠉⢿⣦⠘⣿⣿⡆⠀⢠⣾⣿⠋⠀⣼⣿⣿⣿⠿⠷⢠⣿⣿⣿⠿⢻⣿⣧⠀⠀⠀\n");
-    print("⠀⠀⠀⣴⣿⣿⠋⠀⠀⠀⢸⣿⣇⢹⣿⣷⣰⣿⣿⠃⠀⢠⣿⣿⢃⣀⣤⣤⣾⣿⡟⠀⠀⠀⢻⣿⣆⠀⠀\n");
-    print("⠀⠀⠀⣿⣿⡇⠀⠀⢀⣴⣿⣿⡟⠀⣿⣿⣿⣿⠃⠀⠀⣾⣿⣿⡿⠿⠛⢛⣿⡟⠀⠀⠀⠀⠀⠻⠿⠀⠀\n");
-    print("⠀⠀⠀⠹⣿⣿⣶⣾⣿⣿⣿⠟⠁⠀⠸⢿⣿⠇⠀⠀⠀⠛⠛⠁⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀\n");
-    print("⠀⠀⠀⠀⠈⠙⠛⠛⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\n");
-
-    
-}
-
-
-/*
-int random_extract() {
-    volatile int* randptr = (volatile int*) 0x400042;
-    *(timer + 1*2) = 8;
-    return *randptr & 1;
-}
-    */
-
-
-
 void desk(Player *player) {
+
     if (player->bloated) {
         clear_row();
         pretty_print("Maybe i shouldn't have eaten that leftover dinner...\n");
@@ -558,6 +477,7 @@ void desk(Player *player) {
         pretty_print("You feel embarrassed.\n");
         player->charisma -= 10;
     }
+
     scene_init(player);
 
     print("  \n");
@@ -590,13 +510,13 @@ print("_______________________________________________________________________\n
         if (get_btn()){
             switch (choice)
             {
-            case 0b001:
+            case 0b001: //Find keycard from parking lot, get cash
 
                 /* code */
                 break;
             
             case 0b010:
-            pretty_print("Nerd things\n");
+            pretty_print("Nerd things\n"); //Find toy from parking lot, get charisma
                 /* code */
                 break;
 
@@ -605,8 +525,7 @@ print("_______________________________________________________________________\n
                 break;
             
             default:  // Invalid selection, retry
-                pretty_print("Invalid choice! Flip only ONE switch and press the button.\n");
-                clear_row();
+                error_message();
                 continue; 
             }
             break; // Exit the while loop after a valid selection
@@ -616,6 +535,7 @@ print("_______________________________________________________________________\n
 }
 }
 
+///////////COFFEE GAME HERE////////////
 
 
 
@@ -623,6 +543,11 @@ void lunch(Player *player) {
     scene_init(player);
 
     pretty_print("*Stomach growling* ... I guess I need to feed the beast?\n");
+    clear_row();
+    pretty_print("You head to the cafeteria\n");
+    print("  \n");
+    print("  \n");
+
     pretty_print("1. Salad\n");
     pretty_print("2. Burger\n");
     pretty_print("3. Sushi\n");
@@ -662,7 +587,6 @@ void toilet(Player *player) {
     pretty_print("You feel the urge to go to the toilet.\n");
   
     pretty_print("1. Go to the toilet\n");
-    pretty_print("1. Go to the toilet\n");
     pretty_print("2. Hold it in\n");
 
     int choice;
@@ -690,11 +614,89 @@ void toilet(Player *player) {
 }
 }
 
+///////////TERMINAL GAME HERE////////////
 
-//Start
+void clocking_out(Player *player) {
+    clear_screen();
+
+    pretty_print("You're finally done for the day. You clock out and head home...\n");
+    pretty_print("You survived another day at the office!\n");
+    pretty_print("You raise your fists in the air in triumph!\n");
+
+    print("  \n");
+    print("  \n");
+
+
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⡾⢛⢻⣷⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⢀⣾⣟⠛⢿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣿⠋⠰⡀⢎⣿⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⢸⣿⠀⠎⠠⡙⣿⡄⠀⠀⢀⣀⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⡿⣷⣦⣴⣏⣽⡟⠡⠌⡱⠈⡼⣿⣀⡀⠀⠀⠀\n");
+    print("⠀⢀⣴⡾⢿⣌⠌⡁⢆⠹⣿⣄⣠⣿⠛⠯⣝⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣇⠐⡈⢿⣿⣿⡟⠁⢆⠱⢀⡱⡝⢉⡉⢿⣦⠀⠀\n");
+    print("⢀⣿⠇⡐⡈⠻⣦⠁⢂⠆⠻⣿⣿⡃⢉⠔⣫⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⢿⣎⠰⢈⠙⡋⢅⠊⡄⠢⡁⡑⢠⠂⠔⣈⣿⠆⠀\n");
+    print("⠐⣿⡜⢠⠐⡡⢠⠘⠤⡈⠔⣈⢉⠰⠈⡜⣼⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣷⡆⠡⠒⡌⠰⣀⠣⠐⢌⢂⠩⡐⢬⠿⣦⡄\n");
+    print("⠀⢙⣿⣷⠆⡑⢠⠉⡐⢡⠊⠔⢂⠙⣲⣼⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣷⣥⠁⢆⠱⠀⢆⠩⠄⢊⠰⠐⣂⠰⢘⣿\n");
+    print("⠘⣿⡏⢀⠢⡑⢂⠡⡘⢠⠑⡌⢂⠒⣼⡟⠀⠀⠀⣀⣤⣤⣶⣶⣶⣶⣶⣦⣴⣤⣤⣄⣀⠈⠻⣷⣤⡂⢉⠢⠘⡈⠆⠡⠃⢄⠒⣼⡿\n");
+    print("⠀⠹⣷⣌⠄⡑⡈⠆⡑⢂⠢⠐⣬⣾⠟⢁⣤⣾⠿⠛⢋⢹⣷⠖⡠⢷⣆⡐⡈⢉⢉⡙⠛⠿⢷⣮⣝⠻⣷⣶⣥⣦⣬⣥⣼⣤⣾⠟⠁\n");
+    print("⠀⠀⠈⠙⠻⢷⣌⣄⢡⣢⣴⣿⠟⢉⣴⡟⠋⠄⣂⣡⣾⡿⢋⠰⠀⢭⡻⢷⣷⣬⣤⣀⣃⣐⠂⡉⠛⢷⣦⠈⠉⠉⠉⠉⠛⠋⠁⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠙⠛⠛⠛⠉⢀⣴⡟⠳⠶⢷⠾⠟⠫⣵⣯⡔⢎⡱⢾⣷⣤⡈⢉⠍⠛⠛⢋⡐⠡⢘⡀⠛⣿⣄⠀⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣾⠋⠤⠡⠌⡄⠢⣬⣿⣿⣏⡜⣪⡑⢯⣿⣿⣿⣦⢈⠢⢑⠢⡘⢄⠃⠤⠑⡈⢿⣦⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⡿⠁⢎⡐⠡⢊⣤⣷⣿⣿⣻⠟⡭⠵⢭⡋⠿⣽⣿⣿⣷⣦⣆⣂⣁⠢⠘⢠⠃⠌⢊⢿⡆⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⠃⡍⠰⣰⣿⣿⣿⠿⣿⢶⠏⡟⢬⡙⢦⡍⢧⡙⢷⣽⣻⡿⢿⣿⣿⣿⣇⠂⠜⡈⠔⣺⣿⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⣼⡟⢰⡈⠌⣿⡟⡭⢎⡽⣿⠀⠛⡬⢣⡙⣆⠞⡦⠙⠆⢌⢹⣯⡓⢶⡘⣾⣯⠀⢣⠘⡠⢹⣿⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⣿⡇⢺⡐⡈⣿⡽⣘⢧⣚⣿⠀⢍⣰⣦⣷⣾⣶⣶⣭⡐⢨⠸⣷⡹⢲⡹⢼⣷⠈⢄⠣⢐⣩⣿⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⣿⡣⠥⡃⢌⣿⡵⣩⠶⣩⣿⣠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⡘⣿⡱⣏⡜⣻⣯⠐⣈⠒⡄⢺⣿⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⣿⡇⠒⡅⠢⣿⢖⡭⢳⡱⣯⣿⣿⡿⣟⣯⢟⣽⣻⣿⣿⣿⣿⡽⣱⠞⡼⣹⣷⠐⢠⢃⢞⣽⠇⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⢿⣯⠁⡆⠡⣿⠞⣜⢧⡹⣾⣿⣿⣿⠿⠿⠿⢷⣷⣿⣿⣿⣿⣧⠹⣞⡱⢣⣿⠀⡡⢎⣾⠏⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣇⡘⠠⣿⡛⡼⢢⣓⣿⠟⡉⠄⣂⠆⢒⠠⡀⠌⡙⠛⣛⣮⣓⠮⣕⣻⡏⡰⣴⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣦⡄⠻⣿⡇⢣⡿⠃⢠⠃                                       \n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣦⡄⠻⣿⡇⢣⡿⠃                                       \n");
+  
+    print("  \n");
+
+}
+
+
+void game_over(Player *player) {
+    clear_screen();
+
+    if (player->energy <= 0) {
+        pretty_print("You're too tired to continue... You fall asleep at your desk.\n");
+        pretty_print("Better luck next time....!\n");
+
+    }
+
+    if (player->cash <= 0) {
+        pretty_print("You're broke... .\n");
+        pretty_print("Better luck next time....!\n");
+    }
+    print("\n");
+    print("\n");
+    print("\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⡀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⣤⠀⠀⠀⢀⣴⣿⡶⠀⣾⣿⣿⡿⠟⠛⠁\n");
+    print("⠀⠀⠀⠀⠀⠀⣀⣀⣄⣀⠀⠀⠀⠀⣶⣶⣦⠀⠀⠀⠀⣼⣿⣿⡇⠀⣠⣿⣿⣿⠇⣸⣿⣿⣧⣤⠀⠀⠀\n");
+    print("⠀⠀⢀⣴⣾⣿⡿⠿⠿⠿⠇⠀⠀⣸⣿⣿⣿⡆⠀⠀⢰⣿⣿⣿⣷⣼⣿⣿⣿⡿⢀⣿⣿⡿⠟⠛⠁⠀⠀\n");
+    print("⠀⣴⣿⡿⠋⠁⠀⠀⠀⠀⠀⠀⢠⣿⣿⣹⣿⣿⣿⣿⣿⣿⡏⢻⣿⣿⢿⣿⣿⠃⣼⣿⣯⣤⣴⣶⣿⡤⠀\n");
+    print("⣼⣿⠏⠀⣀⣠⣤⣶⣾⣷⠄⣰⣿⣿⡿⠿⠻⣿⣯⣸⣿⡿⠀⠀⠀⠁⣾⣿⡏⢠⣿⣿⠿⠛⠋⠉⠀⠀⠀\n");
+    print("⣿⣿⠲⢿⣿⣿⣿⣿⡿⠋⢰⣿⣿⠋⠀⠀⠀⢻⣿⣿⣿⠇⠀⠀⠀⠀⠙⠛⠀⠀⠉⠁⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠹⢿⣷⣶⣿⣿⠿⠋⠀⠀⠈⠙⠃⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠈⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣤⣴⣶⣦⣤⡀⠀\n");
+    print("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⡀⠀⠀⠀⠀⠀⠀⠀⣠⡇⢰⣶⣶⣾⡿⠷⣿⣿⣿⡟⠛⣉⣿⣿⣿⠆\n");
+    print("⠀⠀⠀⠀⠀⠀⢀⣤⣶⣿⣿⡎⣿⣿⣦⠀⠀⠀⢀⣤⣾⠟⢀⣿⣿⡟⣁⠀⠀⣸⣿⣿⣤⣾⣿⡿⠛⠁⠀\n");
+    print("⠀⠀⠀⠀⣠⣾⣿⡿⠛⠉⢿⣦⠘⣿⣿⡆⠀⢠⣾⣿⠋⠀⣼⣿⣿⣿⠿⠷⢠⣿⣿⣿⠿⢻⣿⣧⠀⠀⠀\n");
+    print("⠀⠀⠀⣴⣿⣿⠋⠀⠀⠀⢸⣿⣇⢹⣿⣷⣰⣿⣿⠃⠀⢠⣿⣿⢃⣀⣤⣤⣾⣿⡟⠀⠀⠀⢻⣿⣆⠀⠀\n");
+    print("⠀⠀⠀⣿⣿⡇⠀⠀⢀⣴⣿⣿⡟⠀⣿⣿⣿⣿⠃⠀⠀⣾⣿⣿⡿⠿⠛⢛⣿⡟⠀⠀⠀⠀⠀⠻⠿⠀⠀\n");
+    print("⠀⠀⠀⠹⣿⣿⣶⣾⣿⣿⣿⠟⠁⠀⠸⢿⣿⠇⠀⠀⠀⠛⠛⠁⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀\n");
+    print("⠀⠀⠀⠀⠈⠙⠛⠛⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\n");
+
+    
+}
+
+
 int main() {
     Player player = create_player(); // Initialize player, create the object
     close_display();
+    timer_init(); // Initialize timer
     
     /*
     char output[20]; // Adjusted memory reference
