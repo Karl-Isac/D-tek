@@ -14,12 +14,15 @@ Player create_player() {
     p.caffeinated = 0;
     p.productive = 0;
     p.bloated = 0;
+    p.secret = 0;
+    p.plotting = 0;
 
 
     p.item1 = 0;
     p.item2 = 0;
     p.item3 = 0;
     p.item4 = 0;
+    p.hat = 0;
 
 
     return p;
@@ -139,13 +142,19 @@ void timer_init(void) {
     volatile unsigned short* timer = (volatile unsigned short*) 0x04000020;
     *(timer + 2*2) = (29999999/10) & 0xffff;
     *(timer + 3*2) = (29999999/10) >> 16;
-    *(timer + 1*2) = 6;	// 0b0111; enable: start, cont, NOT ITO (Interrupt TiomOut)
+    *(timer + 1*2) = 6;  // 0b0111; enable: start, cont, NOT ITO (Interrupt TiomOut)
+
 }
 
 int get_random_bit() {
-    volatile int* snapl = (volatile int*) (0x04000020 + 4);  
-    int lower = *snapl;   // Read lower 16-bits
-    return lower & 1;  // Combine into full 32-bit value
+    volatile unsigned short* timer = (volatile unsigned short*) 0x04000020;
+
+    // Trigger a snapshot by writing any value to snapl (offset 4)
+    *(timer + 4*2) = 0;
+
+    // Read from snapl (offset 4) for the snapshot value
+    int lower = *(timer + 4*2);
+    return lower & 1;  // Return the least significant bit
 }
 
 
@@ -160,12 +169,13 @@ void close_display() {
 }
 
 void morning_routine(Player *player) {
+    /**/
     scene_init(player);
 
-    pretty_print("You wake up, but the alarm hasn't rung yet...\n");
+    pretty_print("You wake up, but the alarm hasn't rung yet… Oh, sweet bliss.\n");
     pretty_print("Flip the switches to choose:\n");
-    pretty_print("SW0 → Snooze again\n");
-    pretty_print("SW1 → Get up from bed\n");
+    pretty_print("SW0 → Close your eyes again (“5 more minutes…”—famous last words.)\n");
+    pretty_print("SW1 → Your soul screams, but your body obeys.\n");
     pretty_print("Press the button to confirm your choice...\n");
 
     print("  \n");
@@ -189,11 +199,11 @@ void morning_routine(Player *player) {
             switch (choice) {
                 case 0b01: {  // SW0 ON → Snooze
                     //int* randptr = (int*) 0x400042; // Adjusted memory reference
-                    if (1) {  // 50% chance
-                        pretty_print("You snoozed too much... You feel stressed.\n");
+                    if (get_random_bit()) {  // 50% chance
+                        pretty_print("You snoozed too much... You rush out of the bed feeling stressed.\n");
                         player->stressed = 1;
                     } else {
-                        pretty_print("You wake up just before the alarm rings. You feel refreshed!\n");
+                        pretty_print("You wake up just before the alarm rings. Wow, maybe you’re a genius? 🧠\n");
                         player->energy += 10;
                     }
                     break;
@@ -218,14 +228,15 @@ void morning_routine(Player *player) {
 
     
 
+
 // **Choosing an Outfit**
 void choose_outfit(Player *player) {
     scene_init(player);
     
     pretty_print("Fancying yourself, what will you wear today?\n");
-    pretty_print("1. Fancy suit with fedora\n"); //Item in one of the outfits choices
-    pretty_print("2. Sweatpants and sweatshirt\n");
-    pretty_print("3. T-shirt and some jeans\n");
+    pretty_print("1. Fancy suit & fedora (You look like a 1940s detective... or a mafia goon.)\n"); //Item in one of the outfits choices
+    pretty_print("2. Sweatpants & hoodie (A symbol of ultimate comfort. Or giving up.)\n");
+    pretty_print("3. Shirt & jeans (No frills, and whistles) \n");
 
     print("        _________________________\n");
     print("       (, ______________________ )\n");
@@ -251,29 +262,23 @@ void choose_outfit(Player *player) {
                 case 0b001:  // SW8 ON → Fancy suit
                     pretty_print("You look dapper in your suit and fedora!\n");
                     player->charisma += 5;
-                    player->cash -= 100;
-                    player->item1 = 1;
+                    player->hat = 1;
                     break;
 
                 case 0b010:  // SW9 ON → Sweatpants
                     pretty_print("You feel comfy in your sweatpants and sweatshirt.\n");
+                    pretty_print("The quiet quitters uniform indeed...\n");
                     player->energy += 5;
-                    player->charisma -= 3;
-                    player->cash += 50;
-                    player->item2 = 1;
+                    player->charisma -= 2;
+                  
                     break;
 
                 case 0b100:  // SW10 ON → T-shirt
-                    pretty_print("You're casual in your t-shirt and jeans.\n");
-                    player->energy += 3;
-                    player->charisma += 1;
-                    player->cash += 20;
-                    player->item3 = 1;
+                    pretty_print("You are perfectly unremarkable. Like a corporate ghost.\n");
                     break;    
 
                 default:  // Invalid selection, retry
-                    pretty_print("Invalid choice! Flip only ONE switch and press the button.\n");
-                    clear_row();
+                    error_message();
                     continue; // Loop again instead of calling choose_outfit() recursively
             }
             break; // Exit the while loop after a valid selection
@@ -281,8 +286,9 @@ void choose_outfit(Player *player) {
     }    
    
     player->clock += 1;
-    pretty_print("This seems to be office appropiate doing an agreeable head gesture\n");
-    pretty_print("With newfound energy you take a stride directly to the kitchen\n");
+    pretty_print("You nod at your reflection, as if sealing a silent pact with the universe.\n");
+    pretty_print("This is the outfit of someone who means business... or at least, someone who remembered to put on pants today.\n");
+    pretty_print("With a newfound sense of confidence (or mild regret), you strut towards the kitchen.\n");
 }
 
 
@@ -294,10 +300,10 @@ void breakfast(Player *player) {
     print("  \n");
     print("  \n");
 
-    pretty_print("What will you have for breakfast?\n");
-    pretty_print("1. Coffee & toast\n");
-    pretty_print("2. Breakfast francais\n");
-    pretty_print("3. Leftover dinner\n");
+    pretty_print("What will satiate my hunger for today?\n");
+    pretty_print("1. Coffee & Toast (Classic. Reliable. No risks, no surprises.)\n");
+    pretty_print("2. Breakfast en francais (A croissant, a cigarette, and deep existential dread.)\n");
+    pretty_print("3. Leftover Pizza (The greasy goodness, and an the eco-friendly choice.)\n");
 
     print("⠀⠀⠀⠀⠀⠀⠀⠀⣠⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣄⠀⠀⠀⠀⠀⠀⠀⠀\n");
     print("⠀⠀⠀⠀⠀⠀⠀⠀⣿⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀\n");
@@ -333,10 +339,13 @@ void breakfast(Player *player) {
                 break;
             
             case 0b100:  // SW10 ON → Leftover dinner
-                pretty_print("You feel full after your leftover dinner!\n");
+                pretty_print("Even a bad pizza is still a good pizza!\n");
+                pretty_print("You waistband is starting to feel little tight...\n");
+
                 player->energy += 3;
                 player->cash += 0;
                 player->bloated = 1;
+
                 break;
             
             default:  // Invalid selection, retry
@@ -347,8 +356,9 @@ void breakfast(Player *player) {
         }
 
     player->clock += 1;
-    pretty_print("Checking that the oven is closed for the last time\n");
-    pretty_print("You hurry down the steps of ur apartment and enters the car\n");
+    pretty_print("You double-check that the oven is turned off (because trauma), and head out.\n");
+    pretty_print("The city streets await you… and so does your office nemesis.\n");
+    
 }
 }
 
@@ -428,7 +438,6 @@ void car_game(Player *player) {
         if (player->cash < 0) game_over(player);
     }
 }
-/////////////////////////////////////
 void parkinglot(Player *player) {
     clear_screen();
     print_status(player);
@@ -455,28 +464,36 @@ void parkinglot(Player *player) {
 
     print("  \n");
 
-    pretty_print("1. Park besides your knobhead boss's usual spot\n");
-    pretty_print("2. Park besides your bestie\n");
-    pretty_print("3. Park besides your nemesis\n");
-
+    pretty_print("1. Park in your boss’s usual spot (A power move.)\n");
+    pretty_print("2. Park next to your bestie (Gossip time.)\n");
 
     int choice;
     while (1){
-        choice = get_switches(3);
+        choice = get_switches(2);
         set_leds(choice);
     
     if (get_btn()){
         switch (choice)
         {
         case 0b001:
-            /* code */
+            pretty_print("Your boss sees it. They say nothing. But their eyes... they are plotting.\n");
+            pretty_print("You feel a sense of power. 😎\n");
+            player->charisma += 5;
+            player->plotting = 1; //Getting a negative effect later on
             break;
         
         case 0b010:
-            /* code */
-            break;
-        case 0b100:
-            /* code */
+
+        if (get_random_bit()) {
+            pretty_print("You and your friend execute the legendary secret handshake flawlessly! 🤝✨\n");
+            player->charisma += 5;
+        }else {
+            pretty_print("You attempt to execute the legendary secret handshake… and completely butcher it. 🫠\n");
+            player->charisma -= 5;
+            }
+    
+            pretty_print("Your work bestie spills last weeks forbidden tea. ☕\n");
+            player->secret = 1;
             break;
 
         default:  
@@ -487,20 +504,32 @@ void parkinglot(Player *player) {
     }
 
     player->clock += 1;
-    pretty_print("You enter the building and waved at the receptionist\n");
+    pretty_print("You step out of your car, ready to face the day's nonsense.\n");
 }
 }
 
-void desk(Player *player) {
+
+void desk(Player *player){
 
     if (player->bloated) {
         clear_row();
-        pretty_print("Maybe i shouldn't have eaten that leftover dinner...\n");
+        pretty_print("Maybe i shouldn't have eaten that pizza.\n");
+        pretty_print("The ghost of the double stuffed crust XXL triple cheese pepperoni sausage pizza is coming....")
+
         clear_row();
+
+        pretty_print("BBBRRRRRRRRRRRT!! 💨💥\n");
         pretty_print("You farted loudly and everyone turned to look at you...\n");
         clear_row();
         pretty_print("You feel embarrassed.\n");
         player->charisma -= 10;
+
+        if (get_random_bit()) {
+            pretty_print("Oh no... your office crush is here too.\n");
+            pretty_print("They give you a horrified look before nervously chuckling.\n");
+            pretty_print("You want to disappear into the floor.\n");
+            player->charisma -= 5;
+        }
     }
 
     scene_init(player);
@@ -524,9 +553,9 @@ void desk(Player *player) {
 
     print("  \n");
     print("  \n");
-    pretty_print("1. Talk to your boss\n");
-    pretty_print("2. Talk to your bestie\n");
-    pretty_print("3. Talk to your neighbour\n");
+    pretty_print("1. Talk to your boss (A risky move.)\n");
+    pretty_print("2. Talk to your bestie (Slack off in style.)\n");
+    pretty_print("3. Talk to your annoying desk neighbor (They talk a LOT.)\n");
 
     int choice;
     while (1){
@@ -535,18 +564,25 @@ void desk(Player *player) {
         if (get_btn()){
             switch (choice)
             {
-            case 0b001: //Find keycard from parking lot, get cash
+            case 0b001:
+            if (player->plotting) {
+                pretty_print("The boss .\n"); 
 
                 /* code */
                 break;
             
             case 0b010:
-            pretty_print("Nerd things\n"); //Find toy from parking lot, get charisma
-                /* code */
+                pretty_print("You slide into your bestie’s cubicle, a knowing smirk on your face. 😏\n");
+
+
+                player->stressed = 0;
+
                 break;
 
             case 0b100:
-                /* code */
+            pretty_print("They tell you about their NFT collection...\n");
+            pretty_print("The window besides is whispering for me to just do it.\n");
+            player->sleepy = 1;
                 break;
             
             default:  // Invalid selection, retry
@@ -555,9 +591,10 @@ void desk(Player *player) {
             }
             break; // Exit the while loop after a valid selection
         }
+    }
+}
 
     player->clock += 1;
-}
 }
 
 ///////////COFFEE GAME HERE////////////
@@ -589,7 +626,7 @@ void set_coffee() {
     }
     *display = 0b11110000;
     int i = 2;
-    while (i < coffee) {
+    while (i++ < coffee) {
         display += 0x10;
         *display = 0b11110110;
     }
@@ -703,9 +740,11 @@ void coffee_game(Player *player) {
 
 
 void lunch(Player *player) {
+
+    pretty_print("You glance at the clock. Lunch hour is approaching.\n");
+    pretty_print("Your stomach is growling. Time to feast (or suffer).\n");
     scene_init(player);
 
-    pretty_print("*Stomach growling* ... I guess I need to feed the beast?\n");
     clear_row();
     pretty_print("You head to the cafeteria\n");
     print("  \n");
@@ -743,6 +782,7 @@ void lunch(Player *player) {
     player->clock += 1;
 }
 }
+
 
 void toilet(Player *player) {
     scene_init(player);
