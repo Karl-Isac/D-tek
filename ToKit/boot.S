@@ -1,10 +1,11 @@
 .data
+msg: .asciz "TEST TEST TEST TEST\n"
 .align 2
 welcome_msg: .asciz "================================================\n===== RISC-V Boot-Up Process Now Complete ======\n================================================\n"
 	
 .section .text
 .align 2
-.globl _start
+.globl _start, enable_interrupts, disable_interrupts
 	
 _isr_handler:
 	j _isr_routine	   /* ISR service routine here */
@@ -125,3 +126,15 @@ _start:
 	jal main
 	
 loop:	j loop
+
+disable_interrupts:
+	csrs mie, 0
+	csrs mstatus, 0
+	jr ra
+
+enable_interrupts:
+	csrsi mie, 17 //Switches
+	csrsi mstatus, 3
+	//la a0, msg
+	//jal print
+	jr ra

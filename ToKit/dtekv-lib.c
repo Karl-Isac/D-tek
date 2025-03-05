@@ -15,6 +15,7 @@ void print(char *s)
       printc(*s);
       s++;
   }
+  return;
 }
 
 void print_dec(unsigned int x)
