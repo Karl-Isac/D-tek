@@ -656,27 +656,6 @@ void print_sak(const char* bild[]) {
         print(bild[i++]);
 }
 
-void set_coffee() {
-    close_display();
-    volatile char* display = (volatile char*) 0x4000050;
-    if (coffee == 0) {
-        return;
-    }
-    else if (coffee == 1) {
-        *display = 0b11000000;
-        return;
-    } else {
-        *display = 0b11110000;
-        int i = 2;
-        while (i++ < coffee) {
-            display += 0x10;
-            *display = 0b11110110;
-        }
-        display += 0x10;
-        *display = 0b11000110;
-    }
-}
-
 void coffee_game(Player *player) {
     pretty_print("It is time for a meeting.      \nFuck          \n\nThis will seriouslsly drain your energy, but you have a cup of coffee to keep up you energy :)\n");
     set_coffee();
@@ -699,6 +678,7 @@ void coffee_game(Player *player) {
         delay(100);
         print_sak(boss2);
         c_energy--;
+        if (c_energy <= 0) goto LOOSE;
         display_energy();
         delay(150);
     }
@@ -720,13 +700,14 @@ void coffee_game(Player *player) {
         print_sak(boss2);
         print("Back to buisness...");
         c_energy--;
+        if (c_energy <= 0) goto LOOSE;
         display_energy();
         delay(150);
     }
 
     print_sak(boring);
     pretty_print("EEUGHH!!! The colleague you don't like is telling a SUPER BORING pointless story\nYou loose half of your energy (rounded down)!\n");
-    c_energy /= 2;
+    c_energy = (c_energy > 1) ? c_energy /= 2 : 1;
     display_energy();
 
     print_sak(meeting);
@@ -741,15 +722,17 @@ void coffee_game(Player *player) {
         no_caf = 1;
     }
     delay(150);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 12; i++) {
         print_sak(boss3);
         print("Back to buisness...");
         delay(100);
         print_sak(boss0);
         print("Back to buisness...");
         delay(100);
-        if (no_caf)
+        if (no_caf) {
             c_energy--;
+            if (c_energy <= 0) goto LOOSE;
+        }
         display_energy();
         print_sak(boss1);
         print("Back to buisness...");
@@ -757,11 +740,12 @@ void coffee_game(Player *player) {
         print_sak(boss2);
         print("Back to buisness...");
         c_energy--;
+        if (c_energy <= 0) goto LOOSE;
         display_energy();
         delay(150);
     }
     *(switches + 2) = 0;
-    disable_interrupts();
+    disable_interupts();
     print_sak(question);
     delay(50);
     pretty_print("You just got a question...\nHurry up and answer!\nYou have 3 seconds to switch SW4 to answer correctly\n");
@@ -774,19 +758,28 @@ void coffee_game(Player *player) {
     int res = get_switches(0) & (1 << 4);
     if (res) {
         print_sak(question_good);
-        pretty_print("Good job :  nYou gained +2 charisma.");
+        pretty_print("Good job :)\nYou gained +2 charisma.");
         player->charisma += 2;
     } else {
         print_sak(question_bad);
         pretty_print("PAY ATTENTION");
         print("*player_name*");
-        pretty_print("!!!  This is very bad for your image. -10 charisma!🗣️");
+        pretty_print("!!!\nThis is very bad for your image. -10 charisma!");
         player->charisma -= 10;
     }
-    delay(300);
-    clear_row();
-    pretty_print("The meeting is now over. *Phew*\nBut you lost some energy...😮‍💨");
+    delay(100);
+    clear_screen();
+    pretty_print("The meeting is now over. *Phew*\nBut you lost some energy...");
     player->energy += c_energy - 10;
+    return;
+    LOOSE:
+    clear_row();
+    pretty_print("You fell asleep! Your boss is SUPER mad!!!");
+    pretty_print("You almost lost all your charisma, try to keep a low profile the rest of the day :/\notherwise you WILL get fired!");
+    delay(30);
+    pretty_print("But hey, at least you got a nap :)");
+    player->charisma = 3;
+    player->energy += 1;
 }
 
 void lunch(Player *player) {
