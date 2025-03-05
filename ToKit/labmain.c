@@ -741,18 +741,20 @@ void coffee_game(Player *player) {
 
 void lunch(Player *player) {
 
+    pretty_print("You gleefully exit the meeting, feeling satisfied and caffeinated.\n");
+
+
     pretty_print("You glance at the clock. Lunch hour is approaching.\n");
     pretty_print("Your stomach is growling. Time to feast (or suffer).\n");
     scene_init(player);
 
     clear_row();
-    pretty_print("You head to the cafeteria\n");
     print("  \n");
     print("  \n");
 
-    pretty_print("1. Salad\n");
-    pretty_print("2. Burger\n");
-    pretty_print("3. Sushi\n");
+    pretty_print("1. Salad, the healthy choice (They sure have gotten exepensive lately...)\n");
+    pretty_print("2. Lunch en francais ()  \n");
+    pretty_print("3. Your nemesis lunchbox (Free) \n");
 
     int choice;
     while (1){
@@ -762,15 +764,18 @@ void lunch(Player *player) {
             switch (choice)
             {
             case 0b001:
-                /* code */
+                pretty_print("You chow down  on your salad\n");
+                player->cash -= 80;
+                player->energy += 5;
+                
                 break;
             
             case 0b010:
-                /* code */
+                pretty_print("You head towards the balcony and light up a ciggarete!\n");
                 break;
             
             case 0b100:
-                /* code */
+                pretty_print("")
                 break;
             
             default:  // Invalid selection, retry
@@ -787,26 +792,81 @@ void lunch(Player *player) {
 void toilet(Player *player) {
     scene_init(player);
 
+    print("      /      \\")
+    print("     (____/\\  )")
+    print("      |___  U?(____")
+    print("      _\\L.   |      \\     ___")
+    print("    / /\"\"\"\\ /.-'     |   |\\  |")
+    print("   ( /  _/u     |    \\___|_)_|")
+    print("    \\|  \\\\      /   / \\_(___ __)")
+    print("     |   \\\\    /   /  |  |    |")
+    print("     |    )  _/   /   )  |    |")
+    print("     _\\__/.-'    /___(   |    |")
+    print("  _/  __________/     \\  |    |")
+    print(" //  /  (              ) |    |")
+    print("( \\__|___\\    \\______ /__|____|")
+    print(" \\    (___\\   |______)_/")
+    print("  \\   |\\   \\  \\     /")
+    print("   \\  | \\__ )  )___/")
+    print("    \\  \\  )/  /__(")
+    print("___ |  /_//___|   \\_________")
+    print("  _/  ( / OUuuu    \\")
+    print(" `----'(____________)")
+
+
     pretty_print("You feel the urge to go to the toilet.\n");
+    pretty_print("What will you do?\n");
   
-    pretty_print("1. Go to the toilet\n");
-    pretty_print("2. Hold it in\n");
+    pretty_print("1. Go to the nearest toilet (Quick, easy and often nasty)\n");
+    pretty_print("2. Go to your preferred toilet downstairs (Maybe your bestie is there) \n");
+    
+    if (player->secret == 1) {
+        pretty_print("3. Go to the secret toilet (You know the one ur bestie told about)\n");
+    }
+    
 
     int choice;
     while (1){
-        choice = get_switches(2);
+        choice = get_switches(3);
         set_leds(choice);
         if (get_btn()){
             switch (choice)
             {
-            case 0b01:
-                /* code */
+            case 0b001:
+                pretty_print("Cramped and smelly, but it gets the job done. 🤢\n");
+                pretty_print("The toilet paper is thinner than a micron...Cheap bastards!\n");
+
+                if (get_random_bit()){
+                    pretty_print("You think you felt ur finger go through the paper during a wipe. 😱\n ");
+                    player->charisma -= 5;
+                }
+
+                player->charisma -= 2;
+
                 break;
             
-            case 0b10:
-                /* code */
+            case 0b010:
+                pretty_print("You head to the toilet downstairs.\n");
+                pretty_print("You see your nemesis in the distance...\n");
+                pretty_print("Huh, seems like someone stole his lunch.\n");
+                pretty_print("Finally some good news! 😈\n");
+                player->charisma += 5;
+                player->energy -= 4;
+
                 break;
             
+            case 0b100:
+                pretty_print("You head to the secret toilet...\n");
+                pretty_print("What was the code again...? 🤔 \n");
+                pretty_print("Ohh yeah, it was 1234\n");
+
+                pretty_print("You enter the secret toilet and it's like a spa in there!\n");
+                pretty_print("You feel refreshed and in ease.\n");
+
+                player->energy += 10;
+
+                break;
+
             default:  // Invalid selection, retry
                 error_message();
                 continue; 
@@ -816,7 +876,6 @@ void toilet(Player *player) {
     player->clock += 1;
 }
 }
-
 ///////////TERMINAL GAME HERE////////////
 
 void clocking_out(Player *player) {
