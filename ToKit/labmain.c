@@ -413,7 +413,12 @@ void display_krockar(int krockar) {
 }
 
 void car_game(Player *player) {
-    pretty_print("Time to drive to work\nFlip SWI9 to turn left and SWI0 to turn right.\nAvoid the cars.");
+    pretty_print("Time to drive to work\nFlip SWI9 to turn left and SWI0 to turn right.\nAvoid the cars.\n");
+    int speed = 0;
+    if (player->stressed) {
+        pretty_print("You are late for work, so you have to drive extra fast!!!");
+        speed = 50;
+    }
     delay(300);
     clear_screen();
     int dir;
@@ -421,7 +426,7 @@ void car_game(Player *player) {
     int progress = 0;
     int krockar = 0;
     while (progress < 100) {
-        delay(150);
+        delay(200 - speed);
         if ((dir = get_switches_event()) != 0) {
             if (dir == 1 && player_lane > 0) player_lane--;
              else if (player_lane < NUM_LANES - 1) player_lane++;
@@ -484,13 +489,13 @@ void parkinglot(Player *player) {
         
         case 0b010:
 
-        if (get_random_bit()) {
-            pretty_print("You and your friend execute the legendary secret handshake flawlessly! 🤝✨\n");
-            player->charisma += 5;
-        }else {
-            pretty_print("You attempt to execute the legendary secret handshake… and completely butcher it. 🫠\n");
-            player->charisma -= 5;
-            }
+            if (get_random_bit()) {
+                pretty_print("You and your friend execute the legendary secret handshake flawlessly! 🤝✨\n");
+                player->charisma += 5;
+            }else {
+                pretty_print("You attempt to execute the legendary secret handshake… and completely butcher it. 🫠\n");
+                player->charisma -= 5;
+                }
     
             pretty_print("Your work bestie spills last weeks forbidden tea. ☕\n");
             player->secret = 1;
@@ -514,7 +519,7 @@ void desk(Player *player){
     if (player->bloated) {
         clear_row();
         pretty_print("Maybe i shouldn't have eaten that pizza.\n");
-        pretty_print("The ghost of the double stuffed crust XXL triple cheese pepperoni sausage pizza is coming....")
+        pretty_print("The ghost of the double stuffed crust XXL triple cheese pepperoni sausage pizza is coming....");
 
         clear_row();
 
@@ -562,38 +567,69 @@ void desk(Player *player){
         choice = get_switches(3);
         set_leds(choice);
         if (get_btn()){
-            switch (choice)
-            {
-            case 0b001:
-            if (player->plotting) {
-                pretty_print("The boss .\n"); 
+            switch (choice){
+                case 0b001:
+                    if (player->plotting) {
+                        pretty_print("The boss is still mad about you taking his parkingspace...\n"); 
+                        pretty_print("He desides that your rapport is inadequate and you need to re-write it.\n");
+                        delay(20);
+                        pretty_print("AAAhhh MAAaaeenn :(");
+                        player->energy -= 5;
+                    } else if (player->hat) {
+                        pretty_print("You have the same hat as you boss...\n");
+                        delay(20);
+                        pretty_print("He likes your style 🤠👍\n");
+                        pretty_print("He desides that you deserve a raise 🤑");
+                        player->cash += 100;
 
-                /* code */
-                break;
-            
-            case 0b010:
-                pretty_print("You slide into your bestie’s cubicle, a knowing smirk on your face. 😏\n");
+                    } else {
+                        pretty_print("You approach your boss, he introduces himself politely and asks for your name?\n");
+                        delay(25);
+                        pretty_print("...");
+                        delay(15);
+                        clear_row();
+                        pretty_print("It's ");
+                        print("//TODO: {Add player name}\n");
+                        delay(20);
+                        pretty_print("I've been working here for 10 years...\n\n");
+                        pretty_print("\"Huh\" your boss exclaims while looking at his watch.\n");
+                        pretty_print("\"Whelp, I have meetings to attend. Nice to meet you");
+                        print("//TODO: {Add player name but misspelled}.\n\n");
+                        delay(15);
+                        pretty_print("...");
+                        clear_row();
+                        pretty_print("Why do I even bother...");
+                    }
+                    /* code */
+                    break;
+                
+                case 0b010:
+                    pretty_print("You slide into your bestie’s cubicle, a knowing smirk on your face. 😏\n");
+                    pretty_print("He looks back, and suddenly draw a fingergun!\n");
+                    pretty_print("You draw yours too and you now are in a shootout!\n");
+                    print("PHEW");
+                    delay(5);
+                    print(", POW");
+                    delay(5);
+                    print(", BLAM!\n");
+                    pretty_print("You both laugh and high-five.\n");
+                    pretty_print("You day fells a little bit better now :)");
+                    player->stressed = 0;
+                    break;
 
-
-                player->stressed = 0;
-
-                break;
-
-            case 0b100:
-            pretty_print("They tell you about their NFT collection...\n");
-            pretty_print("The window besides is whispering for me to just do it.\n");
-            player->sleepy = 1;
-                break;
-            
-            default:  // Invalid selection, retry
-                error_message();
-                continue; 
+                case 0b100:
+                    pretty_print("They tell you about their NFT collection...\n");
+                    pretty_print("The window besides is whispering for me to just do it.\n");
+                    player->sleepy = 1;
+                    break;
+                
+                default:  // Invalid selection, retry
+                    error_message();
+                    continue; 
             }
             break; // Exit the while loop after a valid selection
         }
     }
-}
-
     player->clock += 1;
 }
 
@@ -687,7 +723,16 @@ void coffee_game(Player *player) {
     display_energy();
 
     print_sak(meeting);
-    pretty_print("Your boss somehow became extra boring\nYou now loose energy faster\n");
+    int no_caf = 0;
+    pretty_print("Your boss somehow became extra boring\n");
+    if (player->caffeinated) {
+        pretty_print("Thank god that you had that morning coffee so you can edure.");
+        pretty_print("*Used effect Caffinated*");
+    }
+    else {
+        pretty_print("You now loose energy faster\n");
+        no_caf = 1;
+    }
     delay(150);
     for (int i = 0; i < 12; i++) {
         print_sak(boss3);
@@ -696,7 +741,8 @@ void coffee_game(Player *player) {
         print_sak(boss0);
         print("Back to buisness...");
         delay(100);
-        c_energy--;
+        if (no_caf)
+            c_energy--;
         display_energy();
         print_sak(boss1);
         print("Back to buisness...");
@@ -741,46 +787,40 @@ void coffee_game(Player *player) {
 
 void lunch(Player *player) {
 
-    pretty_print("You gleefully exit the meeting, feeling satisfied and caffeinated.\n");
-
-
     pretty_print("You glance at the clock. Lunch hour is approaching.\n");
     pretty_print("Your stomach is growling. Time to feast (or suffer).\n");
     scene_init(player);
 
     clear_row();
+    pretty_print("You head to the cafeteria\n");
     print("  \n");
     print("  \n");
 
-    pretty_print("1. Salad, the healthy choice (They sure have gotten exepensive lately...)\n");
-    pretty_print("2. Lunch en francais ()  \n");
-    pretty_print("3. Your nemesis lunchbox (Free) \n");
+    pretty_print("1. Salad\n");
+    pretty_print("2. Burger\n");
+    pretty_print("3. Sushi\n");
 
     int choice;
     while (1){
         choice = get_switches(3);
         set_leds(choice);
         if (get_btn()){
-            switch (choice)
-            {
-            case 0b001:
-                pretty_print("You chow down  on your salad\n");
-                player->cash -= 80;
-                player->energy += 5;
+            switch (choice) {
+                case 0b001:
+                    /* code */
+                    break;
                 
-                break;
-            
-            case 0b010:
-                pretty_print("You head towards the balcony and light up a ciggarete!\n");
-                break;
-            
-            case 0b100:
-                pretty_print("")
-                break;
-            
-            default:  // Invalid selection, retry
-                error_message();
-                continue; 
+                case 0b010:
+                    /* code */
+                    break;
+                
+                case 0b100:
+                    /* code */
+                    break;
+                
+                default:  // Invalid selection, retry
+                    error_message();
+                    continue; 
             }
             break; // Exit the while loop after a valid selection
         }
@@ -792,26 +832,26 @@ void lunch(Player *player) {
 void toilet(Player *player) {
     scene_init(player);
 
-    print("      /      \\")
-    print("     (____/\\  )")
-    print("      |___  U?(____")
-    print("      _\\L.   |      \\     ___")
-    print("    / /\"\"\"\\ /.-'     |   |\\  |")
-    print("   ( /  _/u     |    \\___|_)_|")
-    print("    \\|  \\\\      /   / \\_(___ __)")
-    print("     |   \\\\    /   /  |  |    |")
-    print("     |    )  _/   /   )  |    |")
-    print("     _\\__/.-'    /___(   |    |")
-    print("  _/  __________/     \\  |    |")
-    print(" //  /  (              ) |    |")
-    print("( \\__|___\\    \\______ /__|____|")
-    print(" \\    (___\\   |______)_/")
-    print("  \\   |\\   \\  \\     /")
-    print("   \\  | \\__ )  )___/")
-    print("    \\  \\  )/  /__(")
-    print("___ |  /_//___|   \\_________")
-    print("  _/  ( / OUuuu    \\")
-    print(" `----'(____________)")
+    print("      /      \\");
+    print("     (____/\\  )");
+    print("      |___  U?(____");
+    print("      _\\L.   |      \\     ___");
+    print("    / /\"\"\"\\ /.-'     |   |\\  |");
+    print("   ( /  _/u     |    \\___|_)_|");
+    print("    \\|  \\\\      /   / \\_(___ __)");
+    print("     |   \\\\    /   /  |  |    |");
+    print("     |    )  _/   /   )  |    |");
+    print("     _\\__/.-'    /___(   |    |");
+    print("  _/  __________/     \\  |    |");
+    print(" //  /  (              ) |    |");
+    print("( \\__|___\\    \\______ /__|____|");
+    print(" \\    (___\\   |______)_/");
+    print("  \\   |\\   \\  \\     /");
+    print("   \\  | \\__ )  )___/");
+    print("    \\  \\  )/  /__(");
+    print("___ |  /_//___|   \\_________");
+    print("  _/  ( / OUuuu    \\");
+    print(" `----'(____________)");
 
 
     pretty_print("You feel the urge to go to the toilet.\n");
@@ -874,8 +914,9 @@ void toilet(Player *player) {
             break; // Exit the while loop after a valid selection
         }
     player->clock += 1;
+    }
 }
-}
+
 ///////////TERMINAL GAME HERE////////////
 
 void clocking_out(Player *player) {
@@ -952,8 +993,13 @@ void game_over(Player *player) {
     print("⠀⠀⠀⣿⣿⡇⠀⠀⢀⣴⣿⣿⡟⠀⣿⣿⣿⣿⠃⠀⠀⣾⣿⣿⡿⠿⠛⢛⣿⡟⠀⠀⠀⠀⠀⠻⠿⠀⠀\n");
     print("⠀⠀⠀⠹⣿⣿⣶⣾⣿⣿⣿⠟⠁⠀⠸⢿⣿⠇⠀⠀⠀⠛⠛⠁⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀\n");
     print("⠀⠀⠀⠀⠈⠙⠛⠛⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\n");
-
+    delay(500);
     exit();
+}
+
+void stat_check(Player *player) {
+    if (player->energy <= 0 || player->charisma <= 0 || player->cash <= 0)
+        game_over(player);
 }
 
 

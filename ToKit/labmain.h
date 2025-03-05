@@ -12,12 +12,15 @@ typedef struct {
     // positive effects
     int caffeinated;
     int productive;
+    int secret;
+    int plotting;
 
     // Items
     int item1;
     int item2;
     int item3;
     int item4;
+    int hat;
 
 } Player;
 
@@ -26,6 +29,7 @@ extern void print_dec(unsigned int x);
 extern void handle_interrupt();
 //extern void read(char *, int);
 void clear_screen();
+void clear_row();
 void delay(unsigned int milli);
 void pretty_print(const char text[]);
 void set_leds(int led_mask);
@@ -62,5 +66,6 @@ void draw_road();
 
 //void terminal_game(Player *player);
 
-void clocking_out(Player *player); 
+void clocking_out(Player *player);
+void stat_check(Player *player);
 void game_over(Player *player);
